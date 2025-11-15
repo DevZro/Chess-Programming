@@ -1,0 +1,25 @@
+fileFormatVersion: 2
+guid: 016386e5ba883fd4ab8ffba4ee982a71
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - darkCol: {fileID: 2600500601522514252, guid: dd51e6844af73704d81ff7fa183f7879, type: 3}
+  - lightCol: {fileID: 2284004857962761308, guid: f3d839f0d374a5446b1b627ebae711a9, type: 3}
+  - black_king: {fileID: -3888481672020999207, guid: 987b96708b00d2a44b7d7e5c3be35de0, type: 3}
+  - black_queen: {fileID: -3888481672020999207, guid: 8f089d016f9b5af4cb82af8ed0fabf41, type: 3}
+  - black_rook: {fileID: -3888481672020999207, guid: 1a62fb58117db1643b41757ac6f0937c, type: 3}
+  - black_bishop: {fileID: -3888481672020999207, guid: d9176636e754f2849b6c4a74b4945968, type: 3}
+  - black_knight: {fileID: -3888481672020999207, guid: d2b041f7b5caf204f933a0e29a752616, type: 3}
+  - black_pawn: {fileID: -3888481672020999207, guid: 24f58a8775893114fb004ef026adea9b, type: 3}
+  - white_king: {fileID: -3888481672020999207, guid: 546aae426272b9648bc188ed69e84639, type: 3}
+  - white_queen: {fileID: -3888481672020999207, guid: 3cdc07b3df125c4499806abb36570077, type: 3}
+  - white_rook: {fileID: -3888481672020999207, guid: 2ec2be79d94a80c45b6069a77e6b0d8f, type: 3}
+  - white_bishop: {fileID: -3888481672020999207, guid: dd9ff8fbf4956cc40ba92765533842a1, type: 3}
+  - white_knight: {fileID: -3888481672020999207, guid: a342ec02d92b0a64db33d352d722be45, type: 3}
+  - white_pawn: {fileID: -3888481672020999207, guid: a0926dbb1de7a05469464a9c57e2efd9, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

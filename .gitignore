@@ -1,0 +1,38 @@
+# --------------------
+# UnityProject
+# --------------------
+UnityProject/[Ll]ibrary/
+UnityProject/[Tt]emp/
+UnityProject/[Oo]bj/
+UnityProject/[Bb]uild/
+UnityProject/[Bb]uilds/
+UnityProject/[Ll]ogs/
+UnityProject/UserSettings/
+UnityProject/MemoryCaptures/
+UnityProject/sysinfo.txt
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Visual Studio / Rider cache
+UnityProject/.vs/
+UnityProject/*.csproj
+UnityProject/*.sln
+UnityProject/*.suo
+UnityProject/*.user
+UnityProject/*.userprefs
+UnityProject/*.pidb
+UnityProject/*.booproj
+UnityProject/*.svd
+
+# --------------------
+# EngineTests / .NET
+# --------------------
+EngineTests/bin/
+EngineTests/obj/
+
+# Rider / VSCode workspace files
+*.idea/
+*.vscode/
+
