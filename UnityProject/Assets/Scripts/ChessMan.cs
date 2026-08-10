@@ -7,8 +7,9 @@ public class ChessMan : MonoBehaviour
 {
     public Sprite black_king, black_queen, black_rook, black_bishop, black_knight, black_pawn;
     public Sprite white_king, white_queen, white_rook, white_bishop, white_knight, white_pawn;
-    public GraphicalBoard GraphicalBoardScript;
-    public Board BoardScript;
+    public GraphicalBoard graphicalBoard;
+    public Board board;
+    public Clock clock;
 
     public void Activate (int pieceType)
     {
@@ -31,74 +32,144 @@ public class ChessMan : MonoBehaviour
 
     private void OnMouseDown()
     {
-        GraphicalBoardScript = GameObject.Find("Graphical Board").GetComponent<GraphicalBoard>();
-        BoardScript = GameObject.Find("Board").GetComponent<Board>(); 
-
-        int index = PieceIndex(); // stores index of selected piece
-        bool correctColourClicked = (BoardScript.OccupyingPiece(index) < 6) == BoardScript.isWhite; // find if right colour was selected 
-
-        if (!GraphicalBoardScript.Clicked && correctColourClicked) {
-            // were there no other clicked pieces and did we click the right colour as well 
-            Debug.Log("To Move");
-            GraphicalBoardScript.Clicked = true;
-            GraphicalBoardScript.selectedPiece = this;
-        }
-
-        else
+        if (!graphicalBoard.currentPlayer.IsHuman) return;
+        if (graphicalBoard.isGameOn)
         {
+            
+            int index = PieceIndex(); // stores index of selected piece
+            int[] pos = new int[2];
+            int startsquare;
+            int stopsquare;
+            int flag;
+            bool correctColourclicked = (board.OccupyingPiece(index) < 6) == board.isWhite; // find if right colour was selected 
 
-            if (GraphicalBoardScript.Clicked && !correctColourClicked) {
-                // capture block
-                // was there already a selected piece and was it a different colour from what we clicked 
-                int start = GraphicalBoardScript.selectedPiece.PieceIndex();
-                int stop = PieceIndex();
-                Move proposed_move = new Move(start, stop, BoardScript.captureFlag); // check if the non special version of the move can be played, if not search for special move
+            if (correctColourclicked) {
+                // did we click the right colour
+                //Debug.Log("To Move");
 
-                if (BoardScript.GenerateMoves().Contains(proposed_move)) {
-                    Debug.Log("Takes");
-                    Vector3 position = this.transform.position;
-                    this.transform.position = new Vector3(10, 10, 1); // i have not figured how to delete the captured piece
-                    GraphicalBoardScript.selectedPiece.transform.position = position;
-                    GameObject.Find(stop.ToString()).GetComponent<ChessMan>().name = "deleted";
-                    GraphicalBoardScript.selectedPiece.name = stop.ToString();
-                    BoardScript.MakeMove(proposed_move); 
+                // we have to clear highlights in case a piece is already clicked
+                // we have to changed clicked to true in case a piece isn't currently clicked
+                for (int i = 0; i < 64; i++) 
+                {
+                    int file = 7 - (i % 8);
+                    int rank = i / 8;
+                    
+                    graphicalBoard.tiles[rank, file].ClearHighlight();
                 }
-                else if ((BoardScript.OccupyingPiece(start) % 6) == 0) // if pawn on the start square
-                { 
-                    proposed_move = new Move(start, stop, BoardScript.queenPromotionFlag);// check for queen promotion checks for all promotions i think
-                    if (BoardScript.GenerateMoves().Contains(proposed_move)) {
-                        int newPiece = GraphicalBoardScript.promotedTo;
-                        if (!(BoardScript.isWhite))
+                graphicalBoard.clicked = true;
+                graphicalBoard.selectedPiece = this;
+                
+                // for hihlighting squares
+                // if a piece is clicked while no other are currently clicked and it is the correct colour
+                // then the possible pieces should be highlighted
+                foreach (Move move in board.GenerateMoves()) 
+                {
+                    startsquare = move.data & 0x003F;
+                    stopsquare = (move.data >> 6) & 0x003F;
+                    flag = (move.data >> 12) & 0x000F;
+
+                    pos = Pos(stopsquare);
+                    if (startsquare == index)
+                    {
+                        if (graphicalBoard.pieces[pos[0], pos[1]] != null)
                         {
-                            newPiece = newPiece + 6;
+                            graphicalBoard.tiles[pos[0], pos[1]].HighlightCapture();
                         }
-                        Vector3 position = this.transform.position;
-                        this.transform.position = new Vector3(10, 10, 1); // i have not figured how to delete the captured piece
-                        GraphicalBoardScript.selectedPiece.transform.position = position;
-                        GameObject.Find(stop.ToString()).GetComponent<ChessMan>().name = "deleted";
-
-                        switch (newPiece) {
-                            case 7: GraphicalBoardScript.selectedPiece.GetComponent<SpriteRenderer>().sprite = GraphicalBoardScript.selectedPiece.black_knight; break;
-                            case 8: GraphicalBoardScript.selectedPiece.GetComponent<SpriteRenderer>().sprite = GraphicalBoardScript.selectedPiece.black_bishop; break;
-                            case 9: GraphicalBoardScript.selectedPiece.GetComponent<SpriteRenderer>().sprite = GraphicalBoardScript.selectedPiece.black_rook; break;
-                            case 10: GraphicalBoardScript.selectedPiece.GetComponent<SpriteRenderer>().sprite = GraphicalBoardScript.selectedPiece.black_queen; break;
-
-                            case 1: GraphicalBoardScript.selectedPiece.GetComponent<SpriteRenderer>().sprite = GraphicalBoardScript.selectedPiece.white_knight; break;
-                            case 2: GraphicalBoardScript.selectedPiece.GetComponent<SpriteRenderer>().sprite = GraphicalBoardScript.selectedPiece.white_bishop; break;
-                            case 3: GraphicalBoardScript.selectedPiece.GetComponent<SpriteRenderer>().sprite = GraphicalBoardScript.selectedPiece.white_rook; break;
-                            case 4: GraphicalBoardScript.selectedPiece.GetComponent<SpriteRenderer>().sprite = GraphicalBoardScript.selectedPiece.white_queen; break;
+                        else
+                        {
+                           graphicalBoard.tiles[pos[0], pos[1]].Highlight(); 
                         }
-
-
-                        GraphicalBoardScript.selectedPiece.name = stop.ToString();
-                        BoardScript.MakeMove(proposed_move);
-                    }
-                } 
+                    }   
+                }
             }
 
-            GraphicalBoardScript.Clicked = false;
+            else
+            {                
+                if (graphicalBoard.clicked && !correctColourclicked) {
+                    // capture block
+                    // was there already a selected piece and was it a different colour from what we clicked 
+                    int start = graphicalBoard.selectedPiece.PieceIndex();
+                    int stop = PieceIndex();
+                    
+
+                    Move proposed_move = new Move(start, stop, board.captureFlag); // check if the non special version of the move can be played, if not search for special move
+
+                    if (board.GenerateMoves().Contains(proposed_move)) {
+                        //Debug.Log("Takes");
+                        Vector3 position = this.transform.position;
+                        this.transform.position = new Vector3(10, 10, 1); // i have not figured how to delete the captured piece
+
+                        pos = Pos(start);
+                        graphicalBoard.pieces[pos[0], pos[1]] = null;
+                        graphicalBoard.selectedPiece.transform.position = position;
+
+                        pos = Pos(stop);
+                        graphicalBoard.pieces[pos[0], pos[1]] = graphicalBoard.selectedPiece;
+
+                        //GameObject.Find(stop.ToString()).GetComponent<ChessMan>().name = "deleted";
+                        //graphicalBoard.selectedPiece.name = stop.ToString();
+                        board.MakeMove(proposed_move);
+                    }
+                    else if ((board.OccupyingPiece(start) % 6) == 0) // if pawn on the start square
+                    { 
+                        switch (graphicalBoard.promotedTo) 
+                        {
+                            case 1: proposed_move = new Move(start, stop, board.knightPromotionFlag);; break;
+                            case 2: proposed_move = new Move(start, stop, board.bishopPromotionFlag);; break;
+                            case 3: proposed_move = new Move(start, stop, board.rookPromotionFlag);; break;
+                            case 4: proposed_move = new Move(start, stop, board.queenPromotionFlag);; break;
+                        }
+                        
+                        if (board.GenerateMoves().Contains(proposed_move)) {
+                            int newPiece = graphicalBoard.promotedTo;
+                            if (!(board.isWhite))
+                            {
+                                newPiece = newPiece + 6;
+                            }
+                            Vector3 position = this.transform.position;
+                            this.transform.position = new Vector3(10, 10, 1); // i have not figured how to delete the captured piece
+
+                            pos = Pos(start);
+                            graphicalBoard.pieces[pos[0], pos[1]] = null;
+                            graphicalBoard.selectedPiece.transform.position = position;
+                            //GameObject.Find(stop.ToString()).GetComponent<ChessMan>().name = "deleted";
+
+                            pos = Pos(stop);
+                            graphicalBoard.pieces[pos[0], pos[1]] = graphicalBoard.selectedPiece;
+
+                            switch (newPiece) {
+                                case 7: graphicalBoard.selectedPiece.GetComponent<SpriteRenderer>().sprite = graphicalBoard.selectedPiece.black_knight; break;
+                                case 8: graphicalBoard.selectedPiece.GetComponent<SpriteRenderer>().sprite = graphicalBoard.selectedPiece.black_bishop; break;
+                                case 9: graphicalBoard.selectedPiece.GetComponent<SpriteRenderer>().sprite = graphicalBoard.selectedPiece.black_rook; break;
+                                case 10: graphicalBoard.selectedPiece.GetComponent<SpriteRenderer>().sprite = graphicalBoard.selectedPiece.black_queen; break;
+
+                                case 1: graphicalBoard.selectedPiece.GetComponent<SpriteRenderer>().sprite = graphicalBoard.selectedPiece.white_knight; break;
+                                case 2: graphicalBoard.selectedPiece.GetComponent<SpriteRenderer>().sprite = graphicalBoard.selectedPiece.white_bishop; break;
+                                case 3: graphicalBoard.selectedPiece.GetComponent<SpriteRenderer>().sprite = graphicalBoard.selectedPiece.white_rook; break;
+                                case 4: graphicalBoard.selectedPiece.GetComponent<SpriteRenderer>().sprite = graphicalBoard.selectedPiece.white_queen; break;
+                            }
+
+
+                            //graphicalBoard.selectedPiece.name = stop.ToString();
+                            board.MakeMove(proposed_move);
+                        }
+                    }
+
+                    for (int i = 0; i < 64; i++) 
+                    {
+                        int file = 7 - (i % 8);
+                        int rank = i / 8;
+                        
+                        graphicalBoard.tiles[rank, file].ClearHighlight();
+                    }
+                    graphicalBoard.clicked = false;
+                }
+
+                
+            }
+
+            graphicalBoard.OnMoveCompleted();
         }
-        Debug.Log(BoardScript.occupied.ToString()); 
     }
 
     public int PieceIndex() {
@@ -113,10 +184,23 @@ public class ChessMan : MonoBehaviour
 
     }
 
+    public int[] Pos(int index) 
+    {
+        int[] pos = new int[2];
+
+        pos[1] = 7 - (index % 8);
+        pos[0] = index / 8;
+
+        return pos;
+    }
+
     // Start is called before the first frame update
+
     void Start()
     {
-       
+       graphicalBoard = GameObject.Find("Graphical Board").GetComponent<GraphicalBoard>();
+       board = GameObject.Find("Board").GetComponent<Board>(); 
+       clock = GameObject.Find("Clock Canvas").GetComponent<Clock>();
     }
     
 }

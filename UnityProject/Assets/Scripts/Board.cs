@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Diagnostics;
 using UnityEngine;
 using Unity.Mathematics;
+using Unity.VisualScripting;
 
 /* 
     The Move struct is a custom data type that represents the a particular move. It is a 16 bit unsigned integer.
@@ -38,8 +39,6 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
         // look up table for all squares a knight can attack from every given position
         private static readonly ulong[] KnightAttackTable = new ulong[64]; 
 
-
-
         public bool isWhite;
 
         /* 
@@ -64,6 +63,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
         public int rookPromotionFlag = 8;
         public int queenPromotionFlag = 9;
 
+        // for the 50 move rule
+        // records how many halfmoves since a pawn move or capture
+        public int halfMoveCounter;
+
         public string STARTING_POSITION = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
         
@@ -74,10 +77,16 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
         public int enpessantSquare;
 
         // Stack implemented to help undo moves,
-        // doesn't store moves but instead uints that provide enough info undo a move
+        // doesn't store moves but instead ulongs that provide enough info undo a move
         // this is because previous moves by themselves are not enough to undo a move 
-        // Stores 32 bit uints that stores, the previous move, any captured piece type, and the enpessant and castling rights before the move was played
-        public Stack<uint> boardStateHistory = new Stack<uint>();
+        // Stores 64 bit ulongs that stores, the previous move, any captured piece type, the enpessant and castling rights before the move was played...
+        // and the number of halfmoves since a pawn move or capture for the 50 move rule 
+        public Stack<ulong> boardStateHistory = new Stack<ulong>();
+
+        public ulong currentZobristHash;
+        private Dictionary<ulong, int> positionHistory = new Dictionary<ulong, int>();
+        public bool claimThreeFold;
+        public bool claimInsufficientMaterial;
 
         /*
         Currently, the only functionality that requires being in the static construtor is the precomputing of the KnightAttackTable
@@ -199,14 +208,17 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 enpessantSquare = (rank * 8) + file;
             }
 
+            halfMoveCounter = int.Parse(stateVariables[4]);
+            UpdateOccupiedAndEmpty();
+            InitializeZobrist();
 
         }
 
         // updates the 4 occupied and empty bitboards
         public void UpdateOccupiedAndEmpty()
         {
-            whiteOccupied = 0;
-            blackOccupied = 0;
+            whiteOccupied = 0UL;
+            blackOccupied = 0UL;
 
             for (int i = 0; i < 6; i++)
             {
@@ -237,20 +249,17 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
             return -1;
         }
 
-
-
         /*
-        Adds a uint to the boardStateHistory stack
-        structure of the uint is this...
+        Adds a ulong to the boardStateHistory stack
+        structure of the ulong is this...
         least 16 significant bits store the data of the move made,
         next 4 bits represent the index of the piece type that was captured, if nothing was captured, it will default to all 1s
         This is an ugly fix but it is a result of the way indices storing has been implemented
         3 instead of 4 bits could have been used if the isWhite bool was used to figure out the colour of the index but 4 is even so 4
         the next 4 bits store the entire castlingrights bool array
         the next 6 bits store the location of the enpessant square
-        this is a total of 30 bits
-        the last 2 bits are currently unused
-        In the future, it is likely that the stack will use ulongs, in order to store the move counter and such 
+        the next 2 bits are currently unused
+        Finally the last 32 bits are used to store the half move counter
         */
         private void UpdateBoardStateHistory(Move move, int j)
         {
@@ -258,20 +267,226 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
              // this method must be called before any of the states are updated,
              // probably during the second loop
 
-            uint boardState = 0;
+            ulong boardState = 0;
             boardState |= move.data;
-            boardState |= (uint)j << 16;
+            boardState |= (ulong)j << 16;
             for(int i = 0; i < 4; i++)
             {
                 if (castlingRights[i])
                 {
-                    boardState |= (uint)1 << (20 + i);
+                    boardState |= (ulong)1 << (20 + i);
                 }
             }
-            boardState |= (uint) enpessantSquare << 24;
+            boardState |= (ulong) enpessantSquare << 24;
+            boardState |= (ulong) halfMoveCounter << 30;
 
             boardStateHistory.Push(boardState);
         }
+
+        // initialises the Zobrist Hashing
+        // should be called once when loading FEN
+        // records initial position as occurred once
+        // there may be need for flexibility with how many times the "initial position" occured or even adding a prior history
+        // we can only load positions from FEN and since such info are not included in FENs it is not yet neccesary
+        public void InitializeZobrist()
+        {
+            currentZobristHash = ComputeFullZobristHash();
+            positionHistory[currentZobristHash] = 1;   
+        }
+
+        // updates zobrist after move is "made"
+        // is called in the MakeMove function
+        // called after updating castling rights and enpessant so needs access to previous castling rights and enpessant
+        public void UpdateZobristAfterMove(Move move, int pieceIndex, int captureIndex, bool[] oldCastlingRights, int oldEnpessantSquare)
+        {
+            int startsquare = move.data & 0x003F;
+            int stopsquare = (move.data >> 6) & 0x003F;
+
+            // 1. Remove piece from old square
+            currentZobristHash ^= Zobrist.pieceKeys[pieceIndex, startsquare];
+
+            // 2. Put piece on new square
+            currentZobristHash ^= Zobrist.pieceKeys[pieceIndex, stopsquare];
+
+            // 3. If capture, remove captured piece
+            if (captureIndex != 15) // since 15 = empty
+                currentZobristHash ^= Zobrist.pieceKeys[captureIndex, stopsquare];
+
+            // 4. Side to move changes
+            currentZobristHash ^= Zobrist.sideKey;
+
+            // 5. Castling rights changed? 
+            for (int i = 0; i < 4; i++)
+            {
+                if (oldCastlingRights[i] != castlingRights[i])
+                {
+                    currentZobristHash ^= Zobrist.castlingKeys[i];
+                }
+            }
+
+            // 6. En passant changed? 
+            if (oldEnpessantSquare != 0) // 0 means no enpessant available
+            {   int oldFile = oldEnpessantSquare % 8;
+                currentZobristHash ^= Zobrist.enPassantKeys[oldFile];
+            }
+
+            if (enpessantSquare != 0)
+            {
+                int file = enpessantSquare % 8;
+                currentZobristHash ^= Zobrist.enPassantKeys[file];
+            }
+
+            // Record the new position
+            if (!positionHistory.ContainsKey(currentZobristHash))
+                positionHistory[currentZobristHash] = 0;
+            positionHistory[currentZobristHash]++;
+        }
+
+        public void UpdateZobristAfterUndo(int originalSquare, int currentSquare, int capturedPieceIndex, bool [] oldCastlingRights, int oldEnpessantSquare)
+        {
+            int piece = OccupyingPiece(originalSquare); // called AFTER bitboards have been updated so will show piece as being on "originalSquare" 
+
+            // Remove current position from history
+            positionHistory[currentZobristHash]--;
+            if (positionHistory[currentZobristHash] == 0)
+                positionHistory.Remove(currentZobristHash);
+
+            // === 1. Remove piece from stop square (reverse of placement) ===
+            currentZobristHash ^= Zobrist.pieceKeys[piece, currentSquare];
+
+            // === 2. Put piece back on start square ===
+            currentZobristHash ^= Zobrist.pieceKeys[piece, originalSquare];
+
+            // === 3. Restore captured piece if there was one ===
+            if (capturedPieceIndex != 15)
+                currentZobristHash ^= Zobrist.pieceKeys[capturedPieceIndex, currentSquare];
+
+            // === 4. Toggle side back (reverse the turn) ===
+            currentZobristHash ^= Zobrist.sideKey;
+
+            // === 5. Castling Rights  ===
+            for (int i = 0; i < 4; i++)
+            {
+                if (oldCastlingRights[i] != castlingRights[i])
+                {
+                    currentZobristHash ^= Zobrist.castlingKeys[i];
+                }
+            }
+
+            // === 6. En Passant ===
+            if (oldEnpessantSquare != 0) // 0 means no enpessant available
+            {   int oldFile = oldEnpessantSquare % 8;
+                currentZobristHash ^= Zobrist.enPassantKeys[oldFile];
+            }
+
+            if (enpessantSquare != 0)
+            {
+                int file = enpessantSquare % 8;
+                currentZobristHash ^= Zobrist.enPassantKeys[file];
+            }
+
+            
+        }
+
+        // Full hash (used only at start)
+        private ulong ComputeFullZobristHash()
+        {
+            ulong hash = 0;
+
+            // All pieces on board
+            for (int sq = 0; sq < 64; sq++)
+            {
+                int piece = OccupyingPiece(sq);
+                if (piece != -1)
+                    hash ^= Zobrist.pieceKeys[piece, sq];
+            }
+
+            // Side to move
+            if (isWhite) hash ^= Zobrist.sideKey;
+
+            // Castling rights 
+            for (int i = 0; i < 4; i++)
+            {
+                if (castlingRights[i] == true)
+                {
+                    hash ^= Zobrist.castlingKeys[i];
+                }
+            }
+
+            // En passant 
+            if (enpessantSquare != 0)
+            {
+                int file = enpessantSquare % 8;
+                hash ^= Zobrist.enPassantKeys[file];
+            }
+
+            return hash;
+        }
+
+        // Call this after every move in your Board class
+        private void CheckForThreefoldRepetition()
+        {
+            if (positionHistory[currentZobristHash] >= 3)
+            {
+                claimThreeFold = true;
+                return;
+            }
+            claimThreeFold = false;
+            
+        }
+
+        // checked after update occupied
+        // current working insufficient material check
+        // check only for K v K, K + B v K, K + N v K
+        private void CheckForInsufficientMaterial()
+        {
+            if ((blackOccupied == bitboards[11]) && (whiteOccupied == bitboards[5])) // K v K
+            {
+                claimInsufficientMaterial = true;
+                UnityEngine.Debug.Log(111111);
+            } 
+
+            else if (((whiteOccupied & ~bitboards[5]) == bitboards[1]) && (blackOccupied == bitboards[11])) // K + nN v K
+            {
+                if ((math.tzcnt(bitboards[1]) + math.lzcnt(bitboards[1])) == 63) // n = 1
+                {
+                    claimInsufficientMaterial = true;
+                    UnityEngine.Debug.Log(222222);
+                }
+            }
+
+            else if (((blackOccupied & ~bitboards[11]) == bitboards[7]) && (whiteOccupied == bitboards[5])) //K v K + nN
+            {
+                if ((math.tzcnt(bitboards[7]) + math.lzcnt(bitboards[7])) == 63) // n = 1
+                {
+                    claimInsufficientMaterial = true;
+                    UnityEngine.Debug.Log(333333);
+                }
+            }
+
+            else if (((whiteOccupied & ~bitboards[5]) == bitboards[2]) && (blackOccupied == bitboards[11])) // K + nB v K
+            {
+                if ((math.tzcnt(bitboards[2]) + math.lzcnt(bitboards[2])) == 63) // n = 1
+                {
+                    claimInsufficientMaterial = true;
+                    UnityEngine.Debug.Log(444444);
+                }
+            }
+
+            else if (((blackOccupied & ~bitboards[11]) == bitboards[8]) && (whiteOccupied == bitboards[5])) //K v K + nB
+            {
+                if ((math.tzcnt(bitboards[8]) + math.lzcnt(bitboards[8])) == 63) // n = 1
+                {
+                    claimInsufficientMaterial = true;
+                    UnityEngine.Debug.Log(555555);
+                }
+            }
+            else // ability to change the position back to normal incase such a position was seen during search.
+            {
+                claimInsufficientMaterial = false;
+            }
+        }
+
         
         /*
         This method computes the bitboard of squares attacked by the play whose turn it is to play
@@ -1166,6 +1381,11 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
             int startsquare = move.data & 0x003F; // isolate the startsquare
             int stopsquare = (move.data >> 6) & 0x003F; // isolate the stopsquare
             int flag = (move.data >> 12) & 0x000F;  // isolate the flag
+
+            // needed for reseting the half move counter 
+            // prone to bugs as initialised as 0 means we start as a pawn
+            // but the value WILL update in the loop... I think.
+            int pieceIndex = 0;  
             int captureIndex = 15; // for updateBoardStateHistory default is all 1s if no captures
 
             // loop through first 6 bitboards to find the correct piece if white to play, last 6 if black
@@ -1173,6 +1393,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
             int stopIndex = isWhite ? 6 : 12;
 
             ulong piece;
+
+            bool[] oldCastlingRights = new bool[4];
+
+            int oldEnpessantSquare = enpessantSquare;
 
             for (int i = startIndex; i < stopIndex; i++)
             {
@@ -1183,7 +1407,8 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 }
                 bitboards[i] &= ~(1UL << startsquare);
                 bitboards[i] |= 1UL << stopsquare;
-            
+
+                pieceIndex = i;
                // If it is not a regular flag, castling flag, or double pawn push flag, it could be a capture
 
 
@@ -1208,64 +1433,15 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 }
 
                 // update board history using the captureIndex
-                // default will be all 1s (15) if no captures 
+                // default will be all 1s (15) if no captures
+                // board state variables are changed after updatingboardstatehistory
+                // this is needed to keep the previous position state before updating to new 
                 UpdateBoardStateHistory(move, captureIndex);          
 
-                if ((i % 6) == 5) // if the king moved
-                {
-                    if (isWhite)
-                    {
-                        castlingRights[0] = false;
-                        castlingRights[1] = false;
-                    }
-                    else
-                    {
-                        castlingRights[2] = false;
-                        castlingRights[3] = false;
-                    }
-                }
+                
+                oldCastlingRights = castlingRights;
 
-                if ((i % 6) == 3) // if the rook moved
-                {
-                    // if a rook moves from the bottom right corner then there is no longer WKS castling. It does not matter if the rook is white 
-                    // or not, cause if it is not white, then white must have already lost that right
-                    if (startsquare == 0)  
-                    {
-                        castlingRights[0] = false;
-                    }
-                    else if (startsquare == 7)
-                    {                       
-                        castlingRights[1] = false;
-                    }
-                    else if (startsquare == 56)
-                    {
-                        castlingRights[2] = false;
-                    }
-                    else if (startsquare == 63)
-                    {
-                        castlingRights[3] = false;
-                    }
-                }
-
-                if (((captureIndex % 6) == 3) && (captureIndex != 15)) // if the rook was taken
-                {
-                    if (stopsquare == 0)  
-                    {
-                        castlingRights[0] = false;
-                    }
-                    else if (stopsquare == 7)
-                    {                       
-                        castlingRights[1] = false;
-                    }
-                    else if (stopsquare == 56)
-                    {
-                        castlingRights[2] = false;
-                    }
-                    else if (stopsquare == 63)
-                    {
-                        castlingRights[3] = false;
-                    }
-                }
+                UpdateCastlingRights(i, startsquare, stopsquare, captureIndex);
 
                 if (flag == regularFlag)
                 {
@@ -1329,20 +1505,34 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 enpessantSquare = 0;
             }
 
+            if ((captureIndex != 15) || ((pieceIndex % 6) == 0))
+            {
+                halfMoveCounter = 0;
+            }
+            else
+            {
+                halfMoveCounter += 1;
+            }
+             
+
             isWhite = !isWhite;
             UpdateOccupiedAndEmpty();
-
+            UpdateZobristAfterMove(move, pieceIndex, captureIndex, oldCastlingRights, oldEnpessantSquare );
+            // UnityEngine.Debug.Log($"{halfMoveCounter} plies");
+            CheckForThreefoldRepetition();
+            CheckForInsufficientMaterial();
         }
 
         public void UndoMove()
         {
-            uint currrentState = boardStateHistory.Pop();
+            ulong currrentState = boardStateHistory.Pop();
+
             ulong piece;
 
             // step 1 is to move whatever moved back to where it came from
-            int originalSquare = (int) currrentState & 0x003F;
-            int currentSquare = ((int) currrentState >> 6) & 0x003F;
-            int flag  = ((int) currrentState >> 12) & 0x000F;
+            int originalSquare = (int) (currrentState & 0x003F);
+            int currentSquare = (int) ((currrentState >> 6) & 0x003F);
+            int flag  = (int) ((currrentState >> 12) & 0x000F);
 
             int startIndex = isWhite ? 6 : 0;
             int stopIndex = isWhite ? 12 : 6;
@@ -1352,6 +1542,9 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
             int pieceonCurrentSquareIndex = -1;
 
             int capturedPieceIndex = ((int) currrentState >> 16) & 0x000F;
+            bool[] oldCastlingRights = new bool[4];
+
+            int oldEnpessantSquare;
 
             for (int i = startIndex; i < stopIndex; i++) // look for the piece type that made a move
             {
@@ -1391,16 +1584,85 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 bitboards[isWhite ? 6 : 0] |= 1UL << originalSquare;
             }
             
+            oldCastlingRights = castlingRights;
+
             for (int i = 0; i < 4; i++)
             {
-                castlingRights[i] = (((1 << (20 + i)) & (currrentState)) == 0) ? false : true;
+                castlingRights[i] = ((((ulong)1 << (20 + i)) & (currrentState)) == 0) ? false : true;
             }
 
+            oldEnpessantSquare = enpessantSquare;
+
             enpessantSquare = ((int) currrentState  >> 24) & 0x003F;
+
+            halfMoveCounter = (int) ((currrentState >> 32) & 0xFFFF);
             
             isWhite = !isWhite;
-            UpdateOccupiedAndEmpty();           
+            UpdateOccupiedAndEmpty();
+            UpdateZobristAfterUndo(originalSquare, currentSquare, capturedPieceIndex, oldCastlingRights, oldEnpessantSquare);
+            CheckForThreefoldRepetition();
+            CheckForInsufficientMaterial();           
         }
+
+        public void UpdateCastlingRights(int pieceIndex, int startsquare, int stopsquare, int captureIndex)
+        {
+            if ((pieceIndex % 6) == 5) // if the king moved
+            {
+                if (isWhite)
+                {
+                    castlingRights[0] = false;
+                    castlingRights[1] = false;
+                }
+                else
+                {
+                    castlingRights[2] = false;
+                    castlingRights[3] = false;
+                }
+            }
+
+            if ((pieceIndex % 6) == 3) // if the rook moved
+            {
+                // if a rook moves from the bottom right corner then there is no longer WKS castling. It does not matter if the rook is white 
+                // or not, cause if it is not white, then white must have already lost that right
+                if (startsquare == 0)  
+                {
+                    castlingRights[0] = false;
+                }
+                else if (startsquare == 7)
+                {                       
+                    castlingRights[1] = false;
+                }
+                else if (startsquare == 56)
+                {
+                    castlingRights[2] = false;
+                }
+                else if (startsquare == 63)
+                {
+                    castlingRights[3] = false;
+                }
+            }
+
+            if (((captureIndex % 6) == 3) && (captureIndex != 15)) // if the rook was taken
+            {
+                if (stopsquare == 0)  
+                {
+                    castlingRights[0] = false;
+                }
+                else if (stopsquare == 7)
+                {                       
+                    castlingRights[1] = false;
+                }
+                else if (stopsquare == 56)
+                {
+                    castlingRights[2] = false;
+                }
+                else if (stopsquare == 63)
+                {
+                    castlingRights[3] = false;
+                }
+            }
+        }
+
 
         public static string ConvertMoveToString(Move move)
         {
@@ -3104,5 +3366,42 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             moves.AddRange(kingMoves); 
             return moves;
-        }   
+        }  
+
+
+        // Function for checking if game is over and who won
+        // returns 3 bools
+        // first returns true if game is over and false if the game is still on
+        // second returns true if the game is won and false if it is a draw
+        // third returns true if white wins and false if black wins
+        // the logic is still incomplete as it doesn't contain 50 move rule and three fold repitition
+        public bool[] GameOver()
+        {
+            bool[] results = new bool[3];
+            if ((GenerateMoves().Count == 0) || claimInsufficientMaterial)
+            {
+                results[0] = true;
+
+                // the player that is to play is the only one that can be in check
+                if ((NumChecks(isWhite)[1] != 0) && ! claimInsufficientMaterial)
+                {
+                    results[1] = true;
+                    results[2] = !isWhite;
+                } 
+            }
+            return results;
+        }
+
+        public int PieceCount(int index)
+        {
+            int count = 0;
+            ulong piece = bitboards[index];
+            while (piece != 0UL)
+            {
+                piece = piece & ~(1UL << math.tzcnt(piece));
+                count += 1;
+            }
+
+            return count;             
+        } 
 }

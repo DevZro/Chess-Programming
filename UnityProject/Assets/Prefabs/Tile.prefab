@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 4820590873418408671}
   - component: {fileID: 5417960770956090558}
   - component: {fileID: 9001907856062866330}
-  - component: {fileID: -691763080100746274}
+  - component: {fileID: 6786019681305773644}
   m_Layer: 0
-  m_Name: DarkSquare
+  m_Name: Tile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -131,7 +131,7 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!114 &-691763080100746274
+--- !u!114 &6786019681305773644
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -143,5 +143,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0602ed163bb165d47a2dced9e04c9d19, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GraphicalBoardScript: {fileID: 0}
-  BoardScript: {fileID: 0}
+  graphicalBoard: {fileID: 0}
+  board: {fileID: 0}
+  clock: {fileID: 0}
+  highlightColor: {r: 0, g: 1, b: 0.5, a: 0.6}
+  captureHighlightColor: {r: 1, g: 0.2, b: 0.2, a: 0.7}

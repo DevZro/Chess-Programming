@@ -28,7 +28,7 @@ Transform:
   m_GameObject: {fileID: 4442779121036060435}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7.46, y: -5.38, z: 0.6057699}
+  m_LocalPosition: {x: -0.5, y: 3.5, z: -1}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -58,8 +58,9 @@ MonoBehaviour:
   white_bishop: {fileID: 21300000, guid: fe5e33ba4ba08f64ba8abd8d35b531f6, type: 3}
   white_knight: {fileID: 21300000, guid: d2052c10d68ee144889e62006eca5d5f, type: 3}
   white_pawn: {fileID: 21300000, guid: 537b76eb9533fb64388fa0989336a8fe, type: 3}
-  GraphicalBoardScript: {fileID: 0}
-  BoardScript: {fileID: 0}
+  graphicalBoard: {fileID: 0}
+  board: {fileID: 0}
+  clock: {fileID: 0}
 --- !u!212 &6770543352429964127
 SpriteRenderer:
   m_ObjectHideFlags: 0
