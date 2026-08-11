@@ -15,7 +15,7 @@ public class GraphicalBoard : MonoBehaviour
     public ChessMan selectedPiece;
     public bool isGameOn;
     public bool clicked = false;
-    public int promotedTo;
+    public int promotedTo = 4;
     public GameStatusController controller;
     public Clock clock;
 
