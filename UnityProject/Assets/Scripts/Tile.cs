@@ -93,7 +93,7 @@ public class Tile: MonoBehaviour
                             //Debug.Log(rook.transform.position);                        
                             rook.transform.position = this.transform.position + new Vector3(1, 0, -1);
 
-                            pos = Pos(rookSquare + 2);
+                            pos = Pos(rookSquare -3);
                             graphicalBoard.pieces[pos[0], pos[1]] = rook; // move piece to new square
                             //Rook.name = (rookSquare - 3).ToString();
                             //Debug.Log(Rook.transform.position);                
