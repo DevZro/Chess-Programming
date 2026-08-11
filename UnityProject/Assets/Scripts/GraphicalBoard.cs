@@ -223,8 +223,8 @@ public class GraphicalBoard : MonoBehaviour
             if (flag == board.captureFlag) // if it is a regular capture
             {
                 Vector3 position = pieces[stoprank, stopfile].transform.position;
-                pieces[stoprank, stopfile].transform.position = new Vector3(10, 10, 1); // i have not figured how to delete the captured piece
-
+                Destroy(pieces[stoprank, stopfile].gameObject);
+                
                 pieces[startrank, startfile].transform.position = position;
                 pieces[stoprank, stopfile] = pieces[startrank, startfile];
                 pieces[startrank, startfile] = null;
@@ -233,7 +233,7 @@ public class GraphicalBoard : MonoBehaviour
             else // it can only be a promotion
             {
                 Vector3 position = pieces[stoprank, stopfile].transform.position;
-                pieces[stoprank, stopfile].transform.position = new Vector3(10, 10, 1); // i have not figured how to delete the captured piece
+                Destroy(pieces[stoprank, stopfile].gameObject);
 
                 pieces[startrank, startfile].transform.position = position;
                 pieces[stoprank, stopfile] = pieces[startrank, startfile];
@@ -291,12 +291,12 @@ public class GraphicalBoard : MonoBehaviour
 
                 if (board.isWhite)
                 {
-                    pieces[stoprank - 1, stopfile].transform.position = new Vector3(10, 10, 1);
+                    Destroy(pieces[stoprank - 1, stopfile].gameObject);
                     pieces[stoprank - 1, stopfile] = null; 
                 }
                 else
                 {
-                    pieces[stoprank + 1, stopfile].transform.position = new Vector3(10, 10, 1);
+                    Destroy(pieces[stoprank + 1, stopfile].gameObject);
                     pieces[stoprank + 1, stopfile] = null;
                 }
             }
