@@ -155,6 +155,8 @@ public interface IBotEngine
 
 Evaluation is material only — pawn 100, knight 300, bishop 300, rook 500, queen 900 — returned from the perspective of the side to move, with checkmate scored at `-100000` and stalemate at `0`. Each engine takes its search depth as a constructor argument.
 
+The step from 1.1 to 1.2 is the one that carries the most ideas. [ALPHA-BETA.md](ALPHA-BETA.md) works through it in detail: what `alpha` and `beta` mean, the long two-function form of the algorithm next to the compact negamax form used here, why the recursive call negates and swaps its bounds, fail-hard vs fail-soft, and a test that will catch unsound pruning.
+
 ## Architecture
 
 The engine and the presentation layer are separated by two interfaces.

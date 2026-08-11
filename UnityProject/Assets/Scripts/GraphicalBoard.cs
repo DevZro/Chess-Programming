@@ -181,6 +181,30 @@ public class GraphicalBoard : MonoBehaviour
         }
     } */
 
+    public void SetPromotionSprite(ChessMan piece, int flag, bool isWhite)
+    {
+        if (isWhite)
+        {
+            switch (flag)
+            {
+                case 6: piece.GetComponent<SpriteRenderer>().sprite = piece.white_knight; break;
+                case 7: piece.GetComponent<SpriteRenderer>().sprite = piece.white_bishop; break;
+                case 8: piece.GetComponent<SpriteRenderer>().sprite = piece.white_rook; break;
+                case 9: piece.GetComponent<SpriteRenderer>().sprite = piece.white_queen; break;
+            }
+        }
+        else
+        {
+            switch (flag)
+            {
+                case 6: piece.GetComponent<SpriteRenderer>().sprite = piece.black_knight; break;
+                case 7: piece.GetComponent<SpriteRenderer>().sprite = piece.black_bishop; break;
+                case 8: piece.GetComponent<SpriteRenderer>().sprite = piece.black_rook; break;
+                case 9: piece.GetComponent<SpriteRenderer>().sprite = piece.black_queen; break;
+            }
+        }
+    }
+
     public void ExecuteMoveVisually(Move move)
     {
         int startsquare = move.data & 0x003F;
@@ -215,26 +239,7 @@ public class GraphicalBoard : MonoBehaviour
                 pieces[stoprank, stopfile] = pieces[startrank, startfile];
                 pieces[startrank, startfile] = null;
 
-                if (board.isWhite)
-                {
-                    switch (flag) // flag will be a promotion flag
-                    {
-                        case 6: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].white_knight; break;
-                        case 7: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].white_bishop; break;
-                        case 8: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].white_rook; break;
-                        case 9: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].white_queen; break;
-                    }
-                }
-                else
-                {
-                    switch (flag)
-                    {
-                        case 7: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].black_knight; break;
-                        case 8: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].black_bishop; break;
-                        case 9: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].black_rook; break;
-                        case 10: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].black_queen; break;
-                    }
-                }
+                SetPromotionSprite(pieces[stoprank, stopfile], flag, board.isWhite);
             }
         }
 
@@ -263,7 +268,7 @@ public class GraphicalBoard : MonoBehaviour
 
                     pieces[stoprank, stopfile - 1].transform.position = rookFinalPosition;
                     pieces[stoprank, stopfile + 1] = pieces[stoprank, stopfile - 1];
-                    pieces[startrank, stopfile - 1] = null;                            
+                    pieces[stoprank, stopfile - 1] = null;                            
                 }
 
                 else // queenside
@@ -272,7 +277,7 @@ public class GraphicalBoard : MonoBehaviour
 
                     pieces[stoprank, stopfile + 2].transform.position = rookFinalPosition;
                     pieces[stoprank, stopfile - 1] = pieces[stoprank, stopfile + 2];
-                    pieces[startrank, stopfile + 2] = null;                            
+                    pieces[stoprank, stopfile + 2] = null;                            
                 }
                     
             }
@@ -304,26 +309,7 @@ public class GraphicalBoard : MonoBehaviour
                 pieces[stoprank, stopfile] = pieces[startrank, startfile];
                 pieces[startrank, startfile] = null;
 
-                if (board.isWhite)
-                {
-                    switch (flag) // flag will be a promotion flag
-                    {
-                        case 6: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].white_knight; break;
-                        case 7: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].white_bishop; break;
-                        case 8: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].white_rook; break;
-                        case 9: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].white_queen; break;
-                    }
-                }
-                else
-                {
-                    switch (flag)
-                    {
-                        case 6: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].black_knight; break;
-                        case 7: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].black_bishop; break;
-                        case 8: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].black_rook; break;
-                        case 9: pieces[stoprank, stopfile].GetComponent<SpriteRenderer>().sprite = pieces[stoprank, stopfile].black_queen; break;
-                    }
-                }
+                SetPromotionSprite(pieces[stoprank, stopfile], flag, board.isWhite);
             }
             
         }

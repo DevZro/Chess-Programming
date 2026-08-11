@@ -31,8 +31,8 @@ public static class Zobrist
 
     private static ulong RandomUlong(System.Random rnd)
     {
-        ulong high = (ulong)rnd.Next();
-        ulong low  = (ulong)rnd.Next();
-        return (high << 32) | low;
+        var buffer = new byte[8];
+        rnd.NextBytes(buffer);
+        return BitConverter.ToUInt64(buffer, 0);
     }
 }

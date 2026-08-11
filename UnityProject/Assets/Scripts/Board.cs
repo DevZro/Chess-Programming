@@ -66,6 +66,8 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
         // for the 50 move rule
         // records how many halfmoves since a pawn move or capture
         public int halfMoveCounter;
+        public int HalfMoveShift = 30; // the number of bits to shift to get to the halfMoveCounter in the ulong stored in boardStateHistory
+        public ulong HalfMoveMask = 0x7F; // half-move counter never exceeds 100 so 7 bits is enough to store it, thus the mask is 0x7F
 
         public string STARTING_POSITION = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -278,7 +280,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 }
             }
             boardState |= (ulong) enpessantSquare << 24;
-            boardState |= (ulong) halfMoveCounter << 30;
+            boardState |= (ulong) halfMoveCounter << HalfMoveShift;
 
             boardStateHistory.Push(boardState);
         }
@@ -1394,7 +1396,8 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             ulong piece;
 
-            bool[] oldCastlingRights = new bool[4];
+            bool[] oldCastlingRights = (bool[])castlingRights.Clone();
+
 
             int oldEnpessantSquare = enpessantSquare;
 
@@ -1437,9 +1440,6 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 // board state variables are changed after updatingboardstatehistory
                 // this is needed to keep the previous position state before updating to new 
                 UpdateBoardStateHistory(move, captureIndex);          
-
-                
-                oldCastlingRights = castlingRights;
 
                 UpdateCastlingRights(i, startsquare, stopsquare, captureIndex);
 
@@ -1542,7 +1542,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
             int pieceonCurrentSquareIndex = -1;
 
             int capturedPieceIndex = ((int) currrentState >> 16) & 0x000F;
-            bool[] oldCastlingRights = new bool[4];
+            bool[] oldCastlingRights = (bool[])castlingRights.Clone();
 
             int oldEnpessantSquare;
 
@@ -1583,8 +1583,6 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 bitboards[pieceonCurrentSquareIndex] &= ~(1UL << originalSquare); //  remove piece from original square
                 bitboards[isWhite ? 6 : 0] |= 1UL << originalSquare;
             }
-            
-            oldCastlingRights = castlingRights;
 
             for (int i = 0; i < 4; i++)
             {
@@ -1595,7 +1593,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             enpessantSquare = ((int) currrentState  >> 24) & 0x003F;
 
-            halfMoveCounter = (int) ((currrentState >> 32) & 0xFFFF);
+            halfMoveCounter = (int) ((currrentState >> HalfMoveShift) & HalfMoveMask);
             
             isWhite = !isWhite;
             UpdateOccupiedAndEmpty();
@@ -1690,7 +1688,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
         A key detail is the special case of a pinned pawn that is stopped from performing enpessant by a rook or queen
         It has not been implicitly taken care of yet and additional care is taken to account for this extremely rare edge case
         */
-        public List<Move> GenerateMoves()
+        public List<Move> GenerateMoves(bool capturesOnly = false)
         {
             int kingIndex = isWhite ? 5 : 11;
             ulong king = bitboards[kingIndex];
@@ -1730,12 +1728,15 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 pieceDestinations -= 1UL << math.tzcnt(pieceDestinations);
             }
             
-            pieceDestinations = GenerateKingAttacks(isWhite) & ~attackedSquares & empty; // squares that are not defended and are empty is a valid move
-
-            while (pieceDestinations != 0)  
+            if (!capturesOnly)
             {
-                kingMoves.Add(new Move(kingSquare, math.tzcnt(pieceDestinations), regularFlag));
-                pieceDestinations -= 1UL << math.tzcnt(pieceDestinations);
+                pieceDestinations = GenerateKingAttacks(isWhite) & ~attackedSquares & empty; // squares that are not defended and are empty is a valid move
+
+                while (pieceDestinations != 0)  
+                {
+                    kingMoves.Add(new Move(kingSquare, math.tzcnt(pieceDestinations), regularFlag));
+                    pieceDestinations -= 1UL << math.tzcnt(pieceDestinations);
+                }
             }
             
             // DOUBLE CHECK
@@ -1756,21 +1757,24 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 while (pieces != 0)
                 {
                     currentpieceSquare = math.tzcnt(pieces);
-                    pieceDestinations = 1UL << currentpieceSquare ;
-                    for (int i = 0; i < 2; i++) // add vertical moves
+                    if (!capturesOnly)
                     {
-                        pieceDestinations <<= 8;
-                        if ((pieceDestinations & empty) == 0)
+                        pieceDestinations = 1UL << currentpieceSquare ;
+                        for (int i = 0; i < 2; i++) // add vertical moves
                         {
-                            break;
+                            pieceDestinations <<= 8;
+                            if ((pieceDestinations & empty) == 0)
+                            {
+                                break;
+                            }
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
+                            // takes care of double pawn moves as well
                         }
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
-                        // takes care of double pawn moves as well
-                    }
-                    pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL; // checks if a north west piece is up for capture
-                    if (pieceDestinations != 0)
-                    {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL; // checks if a north west piece is up for capture
+                        if (pieceDestinations != 0)
+                        {
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare + 7)) & otherColour & ~0x8080808080808080UL; // checks if a north west piece is up for capture
@@ -1787,11 +1791,14 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 while (pieces != 0)
                 {
                     currentpieceSquare = math.tzcnt(pieces);
-                    pieceDestinations = 1UL << (currentpieceSquare + 8) ;
-
-                    if ((pieceDestinations & empty) != 0)
+                    if (!capturesOnly)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                        pieceDestinations = 1UL << (currentpieceSquare + 8) ;
+
+                        if ((pieceDestinations & empty) != 0)
+                        {
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                        }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL;
@@ -1814,14 +1821,17 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 while (pieces != 0)
                 {
                     currentpieceSquare = math.tzcnt(pieces);
-                    pieceDestinations = 1UL << (currentpieceSquare + 8) ;
-
-                    if ((pieceDestinations & empty) != 0)
+                    if (!capturesOnly)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                        pieceDestinations = 1UL << (currentpieceSquare + 8) ;
+
+                        if ((pieceDestinations & empty) != 0)
+                        {
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                        }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL;
@@ -1851,17 +1861,20 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 {
                     currentpieceSquare = math.tzcnt(pieces);
                     // if the pinned pawn is vertically in front of or behind the king then if must be pinned by a rook or queen and thus can still move vertically
-                    if (((currentpieceSquare - kingSquare) % 8) == 0) 
+                    if (!capturesOnly)
                     {
-                        pieceDestinations = 1UL << currentpieceSquare ;
-                        for (int i = 0; i < 2; i++)
+                        if (((currentpieceSquare - kingSquare) % 8) == 0) 
                         {
-                            pieceDestinations <<= 8;
-                            if ((pieceDestinations & empty) == 0)
+                            pieceDestinations = 1UL << currentpieceSquare ;
+                            for (int i = 0; i < 2; i++)
                             {
-                                break;
+                                pieceDestinations <<= 8;
+                                if ((pieceDestinations & empty) == 0)
+                                {
+                                    break;
+                                }
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
                         }
                     }
 
@@ -1894,12 +1907,15 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 {
                     currentpieceSquare = math.tzcnt(pieces);
 
-                    if (((currentpieceSquare - kingSquare) % 8) == 0)
+                    if (!capturesOnly)
                     {
-                        pieceDestinations = 1UL << (currentpieceSquare + 8) ;
-                        if ((pieceDestinations & empty) != 0)
+                        if (((currentpieceSquare - kingSquare) % 8) == 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            pieceDestinations = 1UL << (currentpieceSquare + 8) ;
+                            if ((pieceDestinations & empty) != 0)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                     }
 
@@ -2056,16 +2072,19 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 while (pieces != 0)
                 {
                     currentpieceSquare = math.tzcnt(pieces);
-                    pieceDestinations = 1UL << currentpieceSquare ;
-                    for (int i = 0; i < 2; i++) // add vertical moves
+                    if (!capturesOnly)
                     {
-                        pieceDestinations >>= 8;
-                        if ((pieceDestinations & empty) == 0)
+                        pieceDestinations = 1UL << currentpieceSquare ;
+                        for (int i = 0; i < 2; i++) // add vertical moves
                         {
-                            break;
+                            pieceDestinations >>= 8;
+                            if ((pieceDestinations & empty) == 0)
+                            {
+                                break;
+                            }
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
+                            // takes care of double pawn moves as well
                         }
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
-                        // takes care of double pawn moves as well
                     }
                     pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL; // checks if a south west piece is up for capture
                     if (pieceDestinations != 0)
@@ -2087,11 +2106,14 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 while (pieces != 0)
                 {
                     currentpieceSquare = math.tzcnt(pieces);
-                    pieceDestinations = 1UL << (currentpieceSquare - 8) ;
-
-                    if ((pieceDestinations & empty) != 0)
+                    if (!capturesOnly)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                        pieceDestinations = 1UL << (currentpieceSquare - 8) ;
+
+                        if ((pieceDestinations & empty) != 0)
+                        {
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                        }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL;
@@ -2114,14 +2136,17 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 while (pieces != 0)
                 {
                     currentpieceSquare = math.tzcnt(pieces);
-                    pieceDestinations = 1UL << (currentpieceSquare - 8) ;
-
-                    if ((pieceDestinations & empty) != 0)
+                    if (!capturesOnly)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                        pieceDestinations = 1UL << (currentpieceSquare - 8) ;
+
+                        if ((pieceDestinations & empty) != 0)
+                        {
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                        }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL;
@@ -2151,17 +2176,20 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 {
                     currentpieceSquare = math.tzcnt(pieces);
                     // if the pinned pawn is vertically in front of or behind the king then if must be pinned by a rook or queen and thus can still move vertically
-                    if (((currentpieceSquare - kingSquare) % 8) == 0) 
+                    if (!capturesOnly)
                     {
-                        pieceDestinations = 1UL << currentpieceSquare ;
-                        for (int i = 0; i < 2; i++)
+                        if (((currentpieceSquare - kingSquare) % 8) == 0) 
                         {
-                            pieceDestinations >>= 8;
-                            if ((pieceDestinations & empty) == 0)
+                            pieceDestinations = 1UL << currentpieceSquare ;
+                            for (int i = 0; i < 2; i++)
                             {
-                                break;
+                                pieceDestinations >>= 8;
+                                if ((pieceDestinations & empty) == 0)
+                                {
+                                    break;
+                                }
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
                         }
                     }
 
@@ -2194,12 +2222,15 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 {
                     currentpieceSquare = math.tzcnt(pieces);
 
-                    if (((currentpieceSquare - kingSquare) % 8) == 0)
+                    if (!capturesOnly)
                     {
-                        pieceDestinations = 1UL << (currentpieceSquare - 8) ;
-                        if ((pieceDestinations & empty) != 0)
+                        if (((currentpieceSquare - kingSquare) % 8) == 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            pieceDestinations = 1UL << (currentpieceSquare - 8) ;
+                            if ((pieceDestinations & empty) != 0)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                     }
 
@@ -2361,9 +2392,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                     finalSquare = math.tzcnt(pieceDestinations);
                     if (((1UL << finalSquare) & sameColour) == 0) // If there is no same colour piece on the square
                     {
-                        if (((1UL << finalSquare) & otherColour) == 0) // If there is not a piece of the opposing colour as well (empty), add a regular move
+                        if (!capturesOnly)
                         {
-                            moves.Add(new Move(currentpieceSquare, finalSquare, regularFlag));
+                            if (((1UL << finalSquare) & otherColour) == 0) // If there is not a piece of the opposing colour as well (empty), add a regular move
+                            {
+                                moves.Add(new Move(currentpieceSquare, finalSquare, regularFlag));
+                            }
                         }
                         else // if there is an opposing colour, add a capture
                         {
@@ -2408,7 +2442,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 break;
                             }
                             // if neither, add move
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2425,7 +2462,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2442,7 +2482,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2459,7 +2502,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2499,7 +2545,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -2516,7 +2565,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -2547,7 +2599,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -2564,7 +2619,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
                         }
@@ -2605,7 +2663,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2622,7 +2683,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2639,7 +2703,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2656,7 +2723,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2696,7 +2766,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -2713,7 +2786,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -2743,7 +2819,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -2760,7 +2839,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
                         }
@@ -2800,7 +2882,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2817,7 +2902,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2834,7 +2922,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2851,7 +2942,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2868,7 +2962,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2885,7 +2982,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2902,7 +3002,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2919,7 +3022,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            if (!capturesOnly)
+                            {
+                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            }
                         }
                         break;
 
@@ -2959,7 +3065,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -2976,7 +3085,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -3006,7 +3118,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -3023,7 +3138,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
                         }
@@ -3053,7 +3171,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -3070,7 +3191,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -3100,7 +3224,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
 
@@ -3117,7 +3244,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                     moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                if (!capturesOnly)
+                                {
+                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                }
                             }
                             break;
                         }
@@ -3336,32 +3466,34 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 moves.AddRange(kingMoves);
                 return moves;
             }
-
-            if (isWhite)
+            if (!capturesOnly)
             {
-                // checks for castling
-                // you can not castle out of check
-                // the ulong anded checks if the king destination or square beside is attacked
-                // the squares must also be empty
-                if ((castlingRights[0]) && ((attackedSquares & 0x0000000000000006UL) == 0) && ((occupied & 0x0000000000000006UL) == 0))
+                if (isWhite)
                 {
-                    moves.Add(new Move(kingSquare, 1, castlingFlag));
+                    // checks for castling
+                    // you can not castle out of check
+                    // the ulong anded checks if the king destination or square beside is attacked
+                    // the squares must also be empty
+                    if ((castlingRights[0]) && ((attackedSquares & 0x0000000000000006UL) == 0) && ((occupied & 0x0000000000000006UL) == 0))
+                    {
+                        moves.Add(new Move(kingSquare, 1, castlingFlag));
+                    }
+                    if ((castlingRights[1]) && ((attackedSquares & 0x0000000000000030UL) == 0) && ((occupied & 0x0000000000000070UL) == 0))
+                    {
+                        moves.Add(new Move(kingSquare, 5, castlingFlag));
+                    }
                 }
-                if ((castlingRights[1]) && ((attackedSquares & 0x0000000000000030UL) == 0) && ((occupied & 0x0000000000000070UL) == 0))
+                else
                 {
-                    moves.Add(new Move(kingSquare, 5, castlingFlag));
+                    if ((castlingRights[2]) && ((attackedSquares & 0x0600000000000000UL) == 0) && ((occupied & 0x0600000000000000UL) == 0))
+                    {
+                        moves.Add(new Move(kingSquare, 57, castlingFlag));
+                    }
+                    if ((castlingRights[3]) && ((attackedSquares & 0x3000000000000000UL) == 0) && ((occupied & 0x7000000000000000UL) == 0))
+                    {
+                        moves.Add(new Move(kingSquare, 61, castlingFlag));
+                    }  
                 }
-            }
-            else
-            {
-                if ((castlingRights[2]) && ((attackedSquares & 0x0600000000000000UL) == 0) && ((occupied & 0x0600000000000000UL) == 0))
-                {
-                    moves.Add(new Move(kingSquare, 57, castlingFlag));
-                }
-                if ((castlingRights[3]) && ((attackedSquares & 0x3000000000000000UL) == 0) && ((occupied & 0x7000000000000000UL) == 0))
-                {
-                    moves.Add(new Move(kingSquare, 61, castlingFlag));
-                }  
             }
 
             moves.AddRange(kingMoves); 
@@ -3383,7 +3515,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 results[0] = true;
 
                 // the player that is to play is the only one that can be in check
-                if ((NumChecks(isWhite)[1] != 0) && ! claimInsufficientMaterial)
+                if ((NumChecks(isWhite)[0] != 0) && ! claimInsufficientMaterial)
                 {
                     results[1] = true;
                     results[2] = !isWhite;

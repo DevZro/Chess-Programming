@@ -85,26 +85,20 @@ namespace ChessEngine
 
             // 2. ONLY GENERATE CAPTURES
             // In a real engine, you'd use a specific MoveGen flag for this
-            var moves = board.GenerateMoves();
+            var captures = board.GenerateMoves(capturesOnly: true);
 
-            foreach (Move move in moves)
+            foreach (Move move in captures)
             {
-                int stopsquare = (move.data >> 6) & 0x003F;
-                int targetPieceType = board.OccupyingPiece(stopsquare);
+                board.MakeMove(move);
+                // Recursively call QS, flipping the perspective
+                int score = -QuiescenceSearch(-beta, -alpha);
+                board.UndoMove();
 
-                if (targetPieceType != -1) //capture
-                {
-                    board.MakeMove(move);
-                    // Recursively call QS, flipping the perspective
-                    int score = -QuiescenceSearch(-beta, -alpha);
-                    board.UndoMove();
-
-                    if (score >= beta)
-                        return beta;
-                    
-                    if (score > alpha)
-                        alpha = score;
-                }
+                if (score >= beta)
+                    return beta;
+                
+                if (score > alpha)
+                    alpha = score;
             }
 
             return alpha;
