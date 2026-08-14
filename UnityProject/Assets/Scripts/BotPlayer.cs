@@ -30,23 +30,21 @@ public class BotPlayer : IPlayer
 
     private IEnumerator MakeBotMove()
     {   
-        // 1. Give the UI one frame to breathe before starting
+        // Give the UI one frame to breathe before starting
         yield return new WaitForSeconds(0.05f); // Optional: add a slight delay so the bot doesn't move instantly
 
-        // 2. Run the heavy thinking on a background thread
-        Move bestMove = default;
-        bool calculationComplete = false;
+        var task = System.Threading.Tasks.Task.Run(() => engine.GetBestMove());
 
-        System.Threading.Tasks.Task.Run(() => {
-            bestMove = engine.GetBestMove();
-            calculationComplete = true;
-        });
+        while (!task.IsCompleted) yield return null;
 
-        // 3. Wait for the engine without freezing the clock/UI
-        while (!calculationComplete)
+        if (task.IsFaulted)
         {
-            yield return null; 
+            Debug.LogException(task.Exception);
+            yield break;
         }
+
+        Move bestMove = task.Result;
+
 
         // 4. Validate and Execute
         if (bestMove.data != 0) 

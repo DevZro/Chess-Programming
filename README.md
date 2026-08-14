@@ -175,7 +175,7 @@ GraphicalBoard         instantiates tiles and pieces, animates moves, runs the m
 
 `GraphicalBoard` drives the game loop. After a move it calls `OnMoveCompleted()`, which switches the clock, checks `GameOver()`, shows a result if the game has ended, and otherwise hands the turn to the other `IPlayer`.
 
-`BotPlayer` runs the search on a background thread via `Task.Run` and yields in a coroutine until it finishes, so the clock and UI keep updating while the engine thinks.
+`BotPlayer` runs the search on a background thread via `Task.Run` and yields in a coroutine until it finishes, so the clock and UI keep updating while the engine thinks. [THREADING-AND-UNITY.md](THREADING-AND-UNITY.md) explains that arrangement — Unity's frame loop, why coroutines are not threads, what `Task.Run` does and doesn't give you, and what `MonoBehaviour` costs the engine.
 
 Because search and evaluation only talk to `Board` and `IBotEngine`, a new engine is a single new file plus one line in `StartNewGame()`.
 

@@ -176,6 +176,9 @@ Every engine returns a flat `-100000` for checkmate. With no ply adjustment, a m
 
 ### 1.9 `Board` is searched from a background thread while the main thread reads it
 
+> Background on threads, `Task`, coroutines and `MonoBehaviour`, and how this finding
+> connects to section 2, is in [THREADING-AND-UNITY.md](THREADING-AND-UNITY.md).
+
 `BotPlayer.MakeBotMove`:
 
 ```csharp
@@ -192,7 +195,7 @@ Three further problems in the same block:
 
 - `calculationComplete` is a plain `bool`, not `volatile` and not written through `Interlocked` or `Thread.MemoryBarrier`. The JIT is permitted to hoist the read out of the spin loop. In practice `yield return null` prevents that, but you are relying on an implementation detail for correctness.
 - Exceptions inside `Task.Run` are captured in the `Task`, which nobody observes, so a crash in the engine shows up as a game that quietly stops — no exception, no message. This is the single worst thing about the current setup for debugging.
-- `RandomBotEngine` calls `UnityEngine.Random.Range`, and every engine calls `UnityEngine.Debug.Log`. Both are main-thread-only APIs. Calling them off-thread is undefined at best.
+- `RandomBotEngine` calls `UnityEngine.Random.Range`, which is a main-thread-only API and throws when called off-thread. (`UnityEngine.Debug.Log`, which every engine calls, is one of the few Unity APIs that *is* thread-safe — those calls are noise on the hot path rather than a correctness problem.)
 
 **Fix.** Give the search its own board. Add a copy constructor or `Board.Clone()`, hand the clone to the engine, and apply the returned move to the real board on the main thread. Once the search owns its data there is no race at all, and this is also a precondition for ever searching more than one position in parallel.
 
@@ -220,6 +223,10 @@ Every captured piece stays alive off-screen, stacked at the same coordinate. In 
 ---
 
 ## 2. The engine lives in two places
+
+> Why `Board : MonoBehaviour` makes this duplication unavoidable, and what taking it off
+> `MonoBehaviour` involves, is covered in
+> [THREADING-AND-UNITY.md](THREADING-AND-UNITY.md).
 
 `EngineTests/Program.cs` contains a complete `Chess.ChessBoard` — bitboards, `LoadFen`, all the attack generators, `GetPinnedPieces`, `GenerateRay`, `NumChecks`, `MakeMove`, `UndoMove`, `GenerateMoves` — roughly three thousand lines duplicating `UnityProject/Assets/Scripts/Board.cs`. The two have already diverged: the .NET copy uses `System.Numerics.BitOperations` and a `Stack<uint>` with `const` flags, while the Unity copy uses `Unity.Mathematics` and a `Stack<ulong>`, and has gained Zobrist hashing, the half-move counter, threefold detection and insufficient-material detection that the .NET copy never received.
 
