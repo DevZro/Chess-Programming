@@ -18,16 +18,14 @@ namespace ChessEngine
         int Queen = 900;
 
         int Depth;
-        Board board;
         int Positions = 0;
 
-        public BondFish1_1(int depth, Board chessBoard)
+        public BondFish1_1(int depth)
         {
             Depth = depth;
-            board = chessBoard;
         }
 
-        private int Evaluate()
+        private int Evaluate(Board board)
         {
             int white_count = 0;
             int black_count = 0;
@@ -64,12 +62,12 @@ namespace ChessEngine
             }
         }
 
-        public int Search(int depth)
+        public int Search(int depth, Board board)
         {
             Positions += 1;
             if ((depth == 0) || board.GameOver()[0])
             {
-                return Evaluate();
+                return Evaluate(board);
             }
             var moves = board.GenerateMoves();
             
@@ -77,7 +75,7 @@ namespace ChessEngine
             foreach (Move move in moves)
             {
                 board.MakeMove(move);
-                int score = -Search(depth - 1);
+                int score = -Search(depth - 1, board);
 
                 if (score > best_score)
                 {
@@ -88,7 +86,7 @@ namespace ChessEngine
             return best_score;
         }
 
-        public Move GetBestMove()
+        public Move GetBestMove(Board board)
         {
             Positions = 0;
             Move best_move = new Move(0, 0, 0);
@@ -99,7 +97,7 @@ namespace ChessEngine
             foreach (Move move in moves)
             {
                 board.MakeMove(move);
-                int score = -Search(Depth - 1);
+                int score = -Search(Depth - 1, board);
                 board.UndoMove();
 
                 if (score > best_score)

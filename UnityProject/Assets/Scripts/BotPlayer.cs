@@ -32,8 +32,9 @@ public class BotPlayer : IPlayer
     {   
         // Give the UI one frame to breathe before starting
         yield return new WaitForSeconds(0.05f); // Optional: add a slight delay so the bot doesn't move instantly
+        Board searchBoard = board.Clone(); 
 
-        var task = System.Threading.Tasks.Task.Run(() => engine.GetBestMove());
+        var task = System.Threading.Tasks.Task.Run(() => engine.GetBestMove(searchBoard));
 
         while (!task.IsCompleted) yield return null;
 
@@ -46,14 +47,14 @@ public class BotPlayer : IPlayer
         Move bestMove = task.Result;
 
 
-        // 4. Validate and Execute
+        // Validate and Execute
         if (bestMove.data != 0) 
         {
             graphicalBoard.ExecuteMoveVisually(bestMove);
-            board.MakeMove(bestMove);     
+            board.MakeMove(bestMove);  
         }
 
-        // 5. CRITICAL: Always signal completion to swap the clock
+        // CRITICAL: Always signal completion to swap the clock
         graphicalBoard.OnMoveCompleted();
     }
         

@@ -14,15 +14,9 @@ namespace ChessEngine
         int Bishop = 300;
         int Rook = 500;
         int Queen = 900;
-        Board board;
-
-        public BondFish1_0(int depth, Board chessBoard)
-        {
-            board = chessBoard;
-        }
 
 
-        private int Evaluate()
+        private int Evaluate(Board board)
         {
             int white_count = 0;
             int black_count = 0;
@@ -53,7 +47,7 @@ namespace ChessEngine
             }
         }
 
-        public Move GetBestMove()
+        public Move GetBestMove(Board board)
         {
             Move best_move = new Move(0, 0, 0);
             //float best_score = float.NegativeInfinity;
@@ -62,7 +56,7 @@ namespace ChessEngine
             foreach (Move move in board.GenerateMoves())
             {
                 board.MakeMove(move);
-                int score = -Evaluate();
+                int score = -Evaluate(board);
 
                 if (score > best_score)
                 {

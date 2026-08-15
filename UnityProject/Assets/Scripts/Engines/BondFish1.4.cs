@@ -18,14 +18,11 @@ namespace ChessEngine
         int King = 10000; // irrelevant but populates the PieceValue array
 
         int[] PieceValues = new int[6];
-        int Depth;
-        Board board;
-        int Positions = 0;
+        int Depth;        int Positions = 0;
 
-        public BondFish1_4(int depth, Board chessBoard)
+        public BondFish1_4(int depth)
         {
             Depth = depth;
-            board = chessBoard;
 
             PieceValues[0] = Pawn;
             PieceValues[1] = Knight;
@@ -35,7 +32,7 @@ namespace ChessEngine
             PieceValues[5] = King;
         }
 
-        private int Evaluate()
+        private int Evaluate(Board board)
         {
             int white_count = 0;
             int black_count = 0;
@@ -72,10 +69,10 @@ namespace ChessEngine
             }
         }
 
-        public int QuiescenceSearch(int alpha, int beta)
+        public int QuiescenceSearch(int alpha, int beta, Board board)
         {
             // 1. STAND PAT: Check the static evaluation first
-            int standPat = Evaluate();
+            int standPat = Evaluate(board);
 
             if (standPat >= beta)
                 return beta;
@@ -91,7 +88,7 @@ namespace ChessEngine
             {
                 board.MakeMove(move);
                 // Recursively call QS, flipping the perspective
-                int score = -QuiescenceSearch(-beta, -alpha);
+                int score = -QuiescenceSearch(-beta, -alpha, board);
                 board.UndoMove();
 
                 if (score >= beta)
@@ -116,7 +113,7 @@ namespace ChessEngine
             return PieceValues[pieceType % 6];
         }
 
-        public int ScoreMove(Move move)
+        public int ScoreMove(Move move, Board board)
         {
             int startsquare = move.data & 0x003F;
             int stopsquare = (move.data >> 6) & 0x003F;
@@ -147,19 +144,19 @@ namespace ChessEngine
 
 
 
-        public int Search(int alpha, int beta, int depth)
+        public int Search(int alpha, int beta, int depth, Board board)
         {
             Positions += 1;
             if ((depth == 0) || board.GameOver()[0])
             {
-                return QuiescenceSearch(alpha, beta);
+                return QuiescenceSearch(alpha, beta, board);
             }
             var moves = board.GenerateMoves();
 
             int[] moveScores = new int[moves.Count];
             for (int i = 0; i < moves.Count; i++)
             {
-                moveScores[i] = ScoreMove(moves[i]);
+                moveScores[i] = ScoreMove(moves[i], board);
             }
 
             for (int i = 0; i < moves.Count; i++)
@@ -183,7 +180,7 @@ namespace ChessEngine
 
                 Move move = moves[i];
                 board.MakeMove(move);
-                int score = -Search(-beta, -alpha, depth - 1);
+                int score = -Search(-beta, -alpha, depth - 1, board);
                 board.UndoMove();
               
                 if (score >= beta)
@@ -198,7 +195,7 @@ namespace ChessEngine
             return alpha;
         }
 
-        public Move GetBestMove()
+        public Move GetBestMove(Board board)
         {
             Positions = 0;
             Move best_move = new Move(0, 0, 0);
@@ -211,7 +208,7 @@ namespace ChessEngine
             int[] moveScores = new int[moves.Count];
             for (int i = 0; i < moves.Count; i++)
             {
-                moveScores[i] = ScoreMove(moves[i]);
+                moveScores[i] = ScoreMove(moves[i], board);
             }
 
             for (int i = 0; i < moves.Count; i++)
@@ -235,7 +232,7 @@ namespace ChessEngine
 
                 Move move = moves[i];
                 board.MakeMove(move);
-                int score = -Search(-beta, -alpha, Depth - 1);
+                int score = -Search(-beta, -alpha, Depth - 1, board);
                 board.UndoMove();
 
                 if (score > alpha)

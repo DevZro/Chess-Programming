@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Globalization;
 using System.Diagnostics;
+using System.Linq;
 using Utils;
 
 /* 
@@ -98,6 +99,17 @@ public class Board// All methods, struts and classes related to the Chess Operat
                 KnightAttackTable[square] = ComputeKnightAttacks(square); // fills the KnightAttackTable based on the results of the defined method
             }
         }
+
+        public Board Clone()
+        {
+            var copy = (Board) MemberwiseClone();
+            copy.bitboards          = (ulong[]) bitboards.Clone();
+            copy.castlingRights     = (bool[])  castlingRights.Clone();
+            copy.boardStateHistory  = new Stack<ulong>(boardStateHistory.Reverse());
+            copy.positionHistory    = new Dictionary<ulong,int>(positionHistory);
+            return copy;
+        }
+
 
         /*
         Method for computing the bitboard of attacked sqaures of a Knight on a given square

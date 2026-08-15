@@ -68,7 +68,6 @@ public class GraphicalBoard : MonoBehaviour
         }
 
         SetBoard();
-        PrintPerft(8);
         /*UnityEngine.Debug.Log(board.GenerateMoves()[19].data & 0x003F);
         UnityEngine.Debug.Log((board.GenerateMoves()[19].data >> 6) & 0x003F);
         board.MakeMove(board.GenerateMoves()[19]);
@@ -134,8 +133,8 @@ public class GraphicalBoard : MonoBehaviour
         //whitePlayer = whiteIsHuman ? new HumanPlayer(this, board) : new BotPlayer(board, this, new BondFish1_0());
         //blackPlayer = blackIsHuman ? new HumanPlayer(this, board) : new BotPlayer(board, this, new RandomBotEngine());
 
-        whitePlayer = new BotPlayer(board, this, new BondFish1_4(4, board));
-        blackPlayer = new BotPlayer(board, this, new BondFish1_1(4, board));
+        whitePlayer = new BotPlayer(board, this, new BondFish1_4(6));
+        blackPlayer = new BotPlayer(board, this, new BondFish1_1(3));
 
         //whitePlayer = new HumanPlayer(this, board);
         //blackPlayer = new HumanPlayer(this, board);
