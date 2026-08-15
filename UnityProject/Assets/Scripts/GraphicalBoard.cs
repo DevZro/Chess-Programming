@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Mathematics;
 using ChessEngine;
-
+using System.Diagnostics;
 public class GraphicalBoard : MonoBehaviour
 {
     
@@ -37,6 +37,7 @@ public class GraphicalBoard : MonoBehaviour
         whiteIsHuman = false;
         blackIsHuman = false;
 
+        board = new Board();
         board.LoadFen(starting_position_fen);
 
         Color lightCol = new Color (192/255f, 164/255f, 132/255f);
@@ -66,8 +67,20 @@ public class GraphicalBoard : MonoBehaviour
             }
         }
 
-        SetBoard(); 
-        UnityEngine.Debug.Log("First");
+        SetBoard();
+        PrintPerft(8);
+        /*UnityEngine.Debug.Log(board.GenerateMoves()[19].data & 0x003F);
+        UnityEngine.Debug.Log((board.GenerateMoves()[19].data >> 6) & 0x003F);
+        board.MakeMove(board.GenerateMoves()[19]);
+        foreach (Move move in board.GenerateMoves())
+            {
+                UnityEngine.Debug.Log(move.data & 0x003F);
+                UnityEngine.Debug.Log((move.data >> 6) & 0x003F);
+                board.MakeMove(move);
+                UnityEngine.Debug.Log(Perft(1));
+                board.UndoMove();
+            }
+        */
 
     }
     public void OnMoveCompleted()
@@ -121,7 +134,7 @@ public class GraphicalBoard : MonoBehaviour
         //whitePlayer = whiteIsHuman ? new HumanPlayer(this, board) : new BotPlayer(board, this, new BondFish1_0());
         //blackPlayer = blackIsHuman ? new HumanPlayer(this, board) : new BotPlayer(board, this, new RandomBotEngine());
 
-        whitePlayer = new BotPlayer(board, this, new BondFish1_4(7, board));
+        whitePlayer = new BotPlayer(board, this, new BondFish1_4(4, board));
         blackPlayer = new BotPlayer(board, this, new BondFish1_1(4, board));
 
         //whitePlayer = new HumanPlayer(this, board);
@@ -169,6 +182,21 @@ public class GraphicalBoard : MonoBehaviour
             }
         }
         return total;
+    }
+    public void PrintPerft(int depth) 
+    {
+
+        long total;
+        Stopwatch stopwatch;
+
+        for (int i = 1; i < depth; i++)
+        {
+            stopwatch = Stopwatch.StartNew();
+            total = Perft(i);
+            stopwatch.Stop();
+            UnityEngine.Debug.Log(total);
+            UnityEngine.Debug.Log($" {stopwatch.ElapsedMilliseconds} milliseconds");
+        }
     }
 
     // only insufficient material for now 
@@ -323,19 +351,19 @@ public class GraphicalBoard : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.N)) {
             promotedTo = 1;
-            Debug.Log("Key has been clicked");
+            UnityEngine.Debug.Log("Key has been clicked");
         }
         if (Input.GetKeyDown(KeyCode.B)) {
             promotedTo = 2;
-            Debug.Log("Key has been clicked");
+            UnityEngine.Debug.Log("Key has been clicked");
         }
         if (Input.GetKeyDown(KeyCode.R)) {
             promotedTo = 3;
-            Debug.Log("Key has been clicked");
+            UnityEngine.Debug.Log("Key has been clicked");
         }
         if (Input.GetKeyDown(KeyCode.Q)) {
             promotedTo = 4;
-            Debug.Log("Key has been clicked");
+            UnityEngine.Debug.Log("Key has been clicked");
         }
         if (Input.GetKeyDown(KeyCode.D)) {
             if (board.claimThreeFold)

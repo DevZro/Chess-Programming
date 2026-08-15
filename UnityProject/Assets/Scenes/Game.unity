@@ -810,7 +810,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   whiteClockText: {fileID: 123179733}
   blackClockText: {fileID: 906635325}
-  startingTimeMinutes: 10
   graphicalBoard: {fileID: 2112402369}
 --- !u!114 &1210854820
 MonoBehaviour:
@@ -1119,67 +1118,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1416259910}
   m_CullTransparentMesh: 1
---- !u!1 &2046001242
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2046001244}
-  - component: {fileID: 2046001243}
-  m_Layer: 0
-  m_Name: Board
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &2046001243
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2046001242}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54ba6d93ba14f0d419c2fa542e4748d2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  bitboards: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-  occupied: 0
-  whiteOccupied: 0
-  blackOccupied: 0
-  isWhite: 0
-  nullFlag: 0
-  regularFlag: 1
-  captureFlag: 2
-  castlingFlag: 3
-  doublePawnMoveFlag: 4
-  enpessantFlag: 5
-  knightPromotionFlag: 6
-  bishopPromotionFlag: 7
-  rookPromotionFlag: 8
-  queenPromotionFlag: 9
-  STARTING_POSITION: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-  enpessantSquare: 0
---- !u!4 &2046001244
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2046001242}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2112402368
 GameObject:
   m_ObjectHideFlags: 0
@@ -1209,7 +1147,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 016386e5ba883fd4ab8ffba4ee982a71, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  board: {fileID: 2046001243}
   chessPiece: {fileID: 5193625392754481193, guid: c1d2128f7391e234e854c9de69559fdc, type: 3}
   tile: {fileID: 6786019681305773644, guid: dd51e6844af73704d81ff7fa183f7879, type: 3}
   selectedPiece: {fileID: 0}
@@ -1218,6 +1155,8 @@ MonoBehaviour:
   promotedTo: 4
   controller: {fileID: 263347970}
   clock: {fileID: 1210854819}
+  whiteIsHuman: 0
+  blackIsHuman: 0
 --- !u!4 &2112402370
 Transform:
   m_ObjectHideFlags: 0
@@ -1238,7 +1177,6 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 519420032}
-  - {fileID: 2046001244}
   - {fileID: 2112402370}
   - {fileID: 1414621082}
   - {fileID: 312713980}

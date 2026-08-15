@@ -235,7 +235,7 @@ This is the most consequential structural problem in the repository, because it 
 **Fix.** One engine, in one place, referenced by both front ends.
 
 1. Take `Board` off `MonoBehaviour` and make it a plain C# class. Nothing in it needs the Unity lifecycle — there is no `Update`, and the static constructor already handles the knight table. Give it a real constructor taking a FEN, and change `GraphicalBoard` to hold `Board board = new Board(starting_position_fen);` instead of a serialized field.
-2. Move the engine files (`Board.cs`, `SharedTypes.cs`, `Zobrist.cs`, `Engines/`) into a folder with an assembly definition (`ChessEngine.asmdef`) that references only `Unity.Mathematics`. Better, drop `Unity.Mathematics` — `System.Numerics.BitOperations.TrailingZeroCount` compiles to the same `tzcnt` instruction and has no Unity dependency at all, which makes the assembly reusable as-is.
+2. Move the engine files (`Board.cs`, `SharedTypes.cs`, `Zobrist.cs`, `Engines/`) into a folder with an assembly definition (`ChessEngine.asmdef`) that references only `Unity.Mathematics`. Better, drop `Unity.Mathematics` — `BitboardUtils.TrailingZeroCount` compiles to the same `tzcnt` instruction and has no Unity dependency at all, which makes the assembly reusable as-is.
 3. Have `EngineTests.csproj` compile those same files by link, instead of holding a copy:
 
 ```xml

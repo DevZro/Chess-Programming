@@ -5,9 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Globalization;
 using System.Diagnostics;
-using UnityEngine;
-using Unity.Mathematics;
-using Unity.VisualScripting;
+using Utils;
 
 /* 
     The Move struct is a custom data type that represents the a particular move. It is a 16 bit unsigned integer.
@@ -17,7 +15,7 @@ using Unity.VisualScripting;
     */
 
 
-public class Board : MonoBehaviour// All methods, struts and classes related to the Chess Operations are stored in the Chess namespace. 
+public class Board// All methods, struts and classes related to the Chess Operations are stored in the Chess namespace. 
 {
     /* 
     This is the major class and data type that forms the backbone of the program.
@@ -450,7 +448,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             else if (((whiteOccupied & ~bitboards[5]) == bitboards[1]) && (blackOccupied == bitboards[11])) // K + nN v K
             {
-                if ((math.tzcnt(bitboards[1]) + math.lzcnt(bitboards[1])) == 63) // n = 1
+                if (BitboardUtils.IsSingleBit(bitboards[1])) // n = 1
                 {
                     claimInsufficientMaterial = true;
                     UnityEngine.Debug.Log(222222);
@@ -459,7 +457,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             else if (((blackOccupied & ~bitboards[11]) == bitboards[7]) && (whiteOccupied == bitboards[5])) //K v K + nN
             {
-                if ((math.tzcnt(bitboards[7]) + math.lzcnt(bitboards[7])) == 63) // n = 1
+                if (BitboardUtils.IsSingleBit(bitboards[7])) // n = 1
                 {
                     claimInsufficientMaterial = true;
                     UnityEngine.Debug.Log(333333);
@@ -468,7 +466,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             else if (((whiteOccupied & ~bitboards[5]) == bitboards[2]) && (blackOccupied == bitboards[11])) // K + nB v K
             {
-                if ((math.tzcnt(bitboards[2]) + math.lzcnt(bitboards[2])) == 63) // n = 1
+                if (BitboardUtils.IsSingleBit(bitboards[2]))  // n = 1
                 {
                     claimInsufficientMaterial = true;
                     UnityEngine.Debug.Log(444444);
@@ -477,7 +475,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             else if (((blackOccupied & ~bitboards[11]) == bitboards[8]) && (whiteOccupied == bitboards[5])) //K v K + nB
             {
-                if ((math.tzcnt(bitboards[8]) + math.lzcnt(bitboards[8])) == 63) // n = 1
+                if (BitboardUtils.IsSingleBit(bitboards[8])) // n = 1
                 {
                     claimInsufficientMaterial = true;
                     UnityEngine.Debug.Log(555555);
@@ -557,7 +555,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (true)
             {
-                square = math.tzcnt(knights); // the square of the first knight is found
+                square = BitboardUtils.TrailingZeroCount(knights); // the square of the first knight is found
                 if (square == 64) // if the square is 64, it means there are no kights left
                 {
                     break;
@@ -777,7 +775,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
             ulong playingPieces = isWhite ? whiteOccupied : blackOccupied;  // this represents the bitboard of pieces whose turn it is and can thus be pinned
 
             ulong king = bitboards[kingIndex];
-            int kingSquare = math.tzcnt(king);
+            int kingSquare = BitboardUtils.TrailingZeroCount(king);
 
             ulong pinningPieces; // the bitboard of all pieces of a certain piece type that could potentially create a pin 
             ulong pinRay; // the bitboard of all squares between the king and all "pinningPieces"
@@ -798,7 +796,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pinningPieces != 0)
             {
-                square = math.tzcnt(pinningPieces);
+                square = BitboardUtils.TrailingZeroCount(pinningPieces);
                 squareDifference = square - kingSquare;
                 inBetweenBitboard = 0; // this variable is used in an update manner throughout the method. Not zeroing it can cause carry over errors
 
@@ -850,9 +848,8 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 // a piece is generally only pinned if it is the only piece in the scope
                 // so the trailing zeros is added to the leading zeros and the sum is check
                 // if it equals 63, it could only mean there is one piece in the bitboard
-                if ((math.tzcnt(inBetweenBitboard & playingPieces) + math.lzcnt(inBetweenBitboard & playingPieces)) == 63) 
-                {
-                    pinnedSquare = math.tzcnt(inBetweenBitboard & playingPieces); // the square of said pinned piece
+                if (BitboardUtils.IsSingleBit(inBetweenBitboard & playingPieces)){
+                    pinnedSquare = BitboardUtils.TrailingZeroCount(inBetweenBitboard & playingPieces); // the square of said pinned piece
                     pinnedPieces |= 1Ul << pinnedSquare;
 
                     // a Piece is considered partially pinned if it can move in a restricted manner
@@ -878,7 +875,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pinningPieces != 0)
             {
-                square = math.tzcnt(pinningPieces);
+                square = BitboardUtils.TrailingZeroCount(pinningPieces);
                 squareDifference = square - kingSquare;
                 inBetweenBitboard = 0;
 
@@ -921,9 +918,9 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                     }  
                 }
 
-                if ((math.tzcnt(inBetweenBitboard & playingPieces) + math.lzcnt(inBetweenBitboard & playingPieces)) == 63)
+                if (BitboardUtils.IsSingleBit(inBetweenBitboard & playingPieces))
                 {
-                    pinnedSquare = math.tzcnt(inBetweenBitboard & playingPieces);
+                    pinnedSquare = BitboardUtils.TrailingZeroCount(inBetweenBitboard & playingPieces);
                     pinnedPieces |= 1Ul << pinnedSquare;
 
                     // a Piece is considered partially pinned if it can move in a restricted manner
@@ -950,7 +947,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pinningPieces != 0)
             {
-                square = math.tzcnt(pinningPieces);
+                square = BitboardUtils.TrailingZeroCount(pinningPieces);
                 squareDifference = square - kingSquare;
                 inBetweenBitboard = 0; // this variable is used in an update manner throughout the method. Not zeroing it can cause carry over errors
 
@@ -1039,9 +1036,9 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 }
 
 
-                if ((math.tzcnt(inBetweenBitboard & playingPieces) + math.lzcnt(inBetweenBitboard & playingPieces)) == 63) 
+                if (BitboardUtils.IsSingleBit(inBetweenBitboard & playingPieces))
                 {
-                    pinnedSquare = math.tzcnt(inBetweenBitboard & playingPieces); // the square of said pinned piece
+                    pinnedSquare = BitboardUtils.TrailingZeroCount(inBetweenBitboard & playingPieces); // the square of said pinned piece
                     pinnedPieces |= 1Ul << pinnedSquare;
                     
                     if (asBishop) // if the queen pins as a bishop, then queens, bishops and pawns should be partially pinned
@@ -1692,7 +1689,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
         {
             int kingIndex = isWhite ? 5 : 11;
             ulong king = bitboards[kingIndex];
-            int kingSquare = math.tzcnt(king);
+            int kingSquare = BitboardUtils.TrailingZeroCount(king);
 
             int pieceIndex; // index of the bitboard of the piece type in question
             ulong pieces; // bitboard of said piece
@@ -1724,8 +1721,8 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pieceDestinations != 0)
             {
-                kingMoves.Add(new Move(kingSquare, math.tzcnt(pieceDestinations), captureFlag));
-                pieceDestinations -= 1UL << math.tzcnt(pieceDestinations);
+                kingMoves.Add(new Move(kingSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
+                pieceDestinations -= 1UL << BitboardUtils.TrailingZeroCount(pieceDestinations);
             }
             
             if (!capturesOnly)
@@ -1734,8 +1731,8 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieceDestinations != 0)  
                 {
-                    kingMoves.Add(new Move(kingSquare, math.tzcnt(pieceDestinations), regularFlag));
-                    pieceDestinations -= 1UL << math.tzcnt(pieceDestinations);
+                    kingMoves.Add(new Move(kingSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
+                    pieceDestinations -= 1UL << BitboardUtils.TrailingZeroCount(pieceDestinations);
                 }
             }
             
@@ -1756,7 +1753,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 pieces = bitboards[pieceIndex] & ~pinnedPieces & 0x000000000000FF00UL; 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     if (!capturesOnly)
                     {
                         pieceDestinations = 1UL << currentpieceSquare ;
@@ -1767,20 +1764,20 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             {
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
                             // takes care of double pawn moves as well
                         }
                         pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL; // checks if a north west piece is up for capture
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare + 7)) & otherColour & ~0x8080808080808080UL; // checks if a north west piece is up for capture
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                     }
                     pieces -= 1UL << currentpieceSquare;
                 }
@@ -1790,27 +1787,27 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     if (!capturesOnly)
                     {
                         pieceDestinations = 1UL << (currentpieceSquare + 8) ;
 
                         if ((pieceDestinations & empty) != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                         }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL;
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare + 7)) & otherColour & ~0x8080808080808080UL;
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                     }
                     pieces -= 1UL << currentpieceSquare;
                 } 
@@ -1820,36 +1817,36 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     if (!capturesOnly)
                     {
                         pieceDestinations = 1UL << (currentpieceSquare + 8) ;
 
                         if ((pieceDestinations & empty) != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                         }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL;
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare + 7)) & otherColour & ~0x8080808080808080UL;
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                     }
                     pieces -= 1UL << currentpieceSquare;
                 }
@@ -1859,7 +1856,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     // if the pinned pawn is vertically in front of or behind the king then if must be pinned by a rook or queen and thus can still move vertically
                     if (!capturesOnly)
                     {
@@ -1873,7 +1870,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 {
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
                             }
                         }
                     }
@@ -1884,7 +1881,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
 
@@ -1893,7 +1890,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare + 7)) & otherColour & ~0x8080808080808080UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
                     pieces -= 1UL << currentpieceSquare;
@@ -1905,7 +1902,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
 
                     if (!capturesOnly)
                     {
@@ -1914,7 +1911,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             pieceDestinations = 1UL << (currentpieceSquare + 8) ;
                             if ((pieceDestinations & empty) != 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                     }
@@ -1924,7 +1921,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
 
@@ -1933,7 +1930,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare + 7)) & otherColour & ~0x8080808080808080UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
                     pieces -= 1UL << currentpieceSquare;
@@ -1944,7 +1941,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     
                     // Pawns that are pinned vertically cannot promote because the pinning piece must be in front of them
                     if (((currentpieceSquare - kingSquare) % 9) == 0)
@@ -1952,10 +1949,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare + 9)) & otherColour & ~0x0101010101010101UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                         }
                     }
 
@@ -1964,10 +1961,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare + 7)) & otherColour & ~0x8080808080808080UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                         }
                     }
                     pieces -= 1UL << currentpieceSquare;
@@ -2004,7 +2001,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 
                                 enpessantPinned = false;
                                 heavyPiecesonfifth = (bitboards[9] | bitboards[10]) & 0x000000FF00000000UL; // finds the rooks and queens on the fifth rank
-                                currentHeavyPieceSquare = math.tzcnt(heavyPiecesonfifth) % 64; // mod 64 to stop the 64 as the output of 0
+                                currentHeavyPieceSquare = BitboardUtils.TrailingZeroCount(heavyPiecesonfifth) % 64; // mod 64 to stop the 64 as the output of 0
                                 
 
                                 if ((kingSquare >= 32) && (kingSquare < 40)) // if king is on fifth rank
@@ -2030,7 +2027,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                             walk += effectiveDirection;;
                                         }
 
-                                        currentHeavyPieceSquare = math.tzcnt(heavyPiecesonfifth) % 64;
+                                        currentHeavyPieceSquare = BitboardUtils.TrailingZeroCount(heavyPiecesonfifth) % 64;
 
                                         
                                     }
@@ -2071,7 +2068,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                 pieces = bitboards[pieceIndex] & ~pinnedPieces & 0x00FF000000000000UL; 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     if (!capturesOnly)
                     {
                         pieceDestinations = 1UL << currentpieceSquare ;
@@ -2082,20 +2079,20 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             {
                                 break;
                             }
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
                             // takes care of double pawn moves as well
                         }
                     }
                     pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL; // checks if a south west piece is up for capture
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare - 9)) & otherColour & ~0x8080808080808080UL; // checks if a south west piece is up for capture
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                     }
                     pieces -= 1UL << currentpieceSquare;
                 }
@@ -2105,27 +2102,27 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     if (!capturesOnly)
                     {
                         pieceDestinations = 1UL << (currentpieceSquare - 8) ;
 
                         if ((pieceDestinations & empty) != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                         }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL;
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare - 9)) & otherColour & ~0x8080808080808080UL;
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                     }
                     pieces -= 1UL << currentpieceSquare;
                 } 
@@ -2135,36 +2132,36 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     if (!capturesOnly)
                     {
                         pieceDestinations = 1UL << (currentpieceSquare - 8) ;
 
                         if ((pieceDestinations & empty) != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                         }
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL;
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                     }
 
                     pieceDestinations = (1UL << (currentpieceSquare - 9)) & otherColour & ~0x8080808080808080UL;
                     if (pieceDestinations != 0)
                     {
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                        moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                        moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                     }
                     pieces -= 1UL << currentpieceSquare;
                 }
@@ -2174,7 +2171,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     // if the pinned pawn is vertically in front of or behind the king then if must be pinned by a rook or queen and thus can still move vertically
                     if (!capturesOnly)
                     {
@@ -2188,7 +2185,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 {
                                     break;
                                 }
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), (i == 0) ? regularFlag : doublePawnMoveFlag));
                             }
                         }
                     }
@@ -2199,7 +2196,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
 
@@ -2208,7 +2205,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare - 9)) & otherColour & ~0x8080808080808080UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
                     pieces -= 1UL << currentpieceSquare;
@@ -2220,7 +2217,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
 
                     if (!capturesOnly)
                     {
@@ -2229,7 +2226,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             pieceDestinations = 1UL << (currentpieceSquare - 8) ;
                             if ((pieceDestinations & empty) != 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                     }
@@ -2239,7 +2236,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
 
@@ -2248,7 +2245,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare - 9)) & otherColour & ~0x8080808080808080UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                         }
                     }
                     pieces -= 1UL << currentpieceSquare;
@@ -2259,7 +2256,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                 while (pieces != 0)
                 {
-                    currentpieceSquare = math.tzcnt(pieces);
+                    currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                     
                     // Pawns that are pinned vertically cannot promote because the pinning piece must be in front of them
                     if (((currentpieceSquare - kingSquare) % 7) == 0)
@@ -2267,10 +2264,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare - 7)) & otherColour & ~0x0101010101010101UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                         }
                     }
 
@@ -2279,10 +2276,10 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         pieceDestinations = (1UL << (currentpieceSquare - 9)) & otherColour & ~0x8080808080808080UL;
                         if (pieceDestinations != 0)
                         {
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), knightPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), bishopPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), rookPromotionFlag));
-                            moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), queenPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), knightPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), bishopPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), rookPromotionFlag));
+                            moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), queenPromotionFlag));
                         }
                     }
                     pieces -= 1UL << currentpieceSquare;
@@ -2319,7 +2316,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 
                                 enpessantPinned = false;
                                 heavyPiecesonfourth = (bitboards[3] | bitboards[4]) & 0x00000000FF000000UL; // finds the rooks and queens on the fourth rank
-                                currentHeavyPieceSquare = math.tzcnt(heavyPiecesonfourth) % 64; // mod 64 to stop the 64 as the output of 0
+                                currentHeavyPieceSquare = BitboardUtils.TrailingZeroCount(heavyPiecesonfourth) % 64; // mod 64 to stop the 64 as the output of 0
 
                                 if (kingSquare >= 24 && (kingSquare < 32)) // if king is on fourth rank
                                 {
@@ -2343,7 +2340,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                             }
                                             walk += effectiveDirection;
                                         }
-                                        currentHeavyPieceSquare = math.tzcnt(heavyPiecesonfourth) % 64;
+                                        currentHeavyPieceSquare = BitboardUtils.TrailingZeroCount(heavyPiecesonfourth) % 64;
                                         
                                     }
                                     if (!(enpessantPinned)) // if enpessant is possible then add move
@@ -2383,18 +2380,18 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pieces != 0)
             {
-                currentpieceSquare = math.tzcnt(pieces);
+                currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                 pieceDestinations = KnightAttackTable[currentpieceSquare];
 
                 // loop through all the possible final squares
                 while (pieceDestinations!= 0)
                 {
-                    finalSquare = math.tzcnt(pieceDestinations);
+                    finalSquare = BitboardUtils.TrailingZeroCount(pieceDestinations);
                     if (((1UL << finalSquare) & sameColour) == 0) // If there is no same colour piece on the square
                     {
-                        if (!capturesOnly)
+                        if (((1UL << finalSquare) & otherColour) == 0) // If there is not a piece of the opposing colour as well (empty), add a regular move
                         {
-                            if (((1UL << finalSquare) & otherColour) == 0) // If there is not a piece of the opposing colour as well (empty), add a regular move
+                            if (!capturesOnly)
                             {
                                 moves.Add(new Move(currentpieceSquare, finalSquare, regularFlag));
                             }
@@ -2405,6 +2402,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                         }
                     }
                     pieceDestinations -= 1UL << finalSquare;
+                    
                 }
 
                 pieces -= 1UL << currentpieceSquare;
@@ -2419,7 +2417,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pieces != 0)
             {
-                currentpieceSquare = math.tzcnt(pieces);
+                currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
 
                 for (int i = 0; i < 4; i++)
                 {
@@ -2438,13 +2436,13 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0) // if different colour, add capture
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             // if neither, add move
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2459,12 +2457,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2479,12 +2477,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2499,12 +2497,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2520,7 +2518,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pieces != 0)
             {
-                currentpieceSquare = math.tzcnt(pieces);
+                currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
 
                 if (((currentpieceSquare - kingSquare) % 9) == 0) // if pinned northwest, only northwest directions are possible
                 {
@@ -2542,12 +2540,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -2562,12 +2560,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -2596,12 +2594,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -2616,12 +2614,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -2640,7 +2638,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pieces != 0)
             {
-                currentpieceSquare = math.tzcnt(pieces);
+                currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                 
 
                 for (int i =0; i < 4; i++)
@@ -2660,12 +2658,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2680,12 +2678,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2700,12 +2698,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2720,12 +2718,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2741,7 +2739,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pieces != 0)
             {
-                currentpieceSquare = math.tzcnt(pieces);
+                currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                 
                 if (((currentpieceSquare - kingSquare) % 8) == 0) 
                 {
@@ -2763,12 +2761,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -2783,12 +2781,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -2816,12 +2814,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -2836,12 +2834,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -2860,7 +2858,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pieces != 0)
             {
-                currentpieceSquare = math.tzcnt(pieces);
+                currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
                 
                 for (int i =0; i < 8; i++)
                 {
@@ -2879,12 +2877,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2899,12 +2897,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2919,12 +2917,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2939,12 +2937,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2959,12 +2957,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2979,12 +2977,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -2999,12 +2997,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -3019,12 +3017,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                             }
                             if ((pieceDestinations & ~otherColour) == 0)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                 break;
                             }
                             if (!capturesOnly)
                             {
-                                moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                             }
                         }
                         break;
@@ -3040,7 +3038,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
             while (pieces != 0)
             {
-                currentpieceSquare = math.tzcnt(pieces);
+                currentpieceSquare = BitboardUtils.TrailingZeroCount(pieces);
 
                 if (((currentpieceSquare - kingSquare) % 9) == 0) 
                 {
@@ -3062,12 +3060,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -3082,12 +3080,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -3115,12 +3113,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -3135,12 +3133,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -3168,12 +3166,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -3188,12 +3186,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -3221,12 +3219,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -3241,12 +3239,12 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                                 }
                                 if ((pieceDestinations & ~otherColour) == 0)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), captureFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), captureFlag));
                                     break;
                                 }
                                 if (!capturesOnly)
                                 {
-                                    moves.Add(new Move(currentpieceSquare, math.tzcnt(pieceDestinations), regularFlag));
+                                    moves.Add(new Move(currentpieceSquare, BitboardUtils.TrailingZeroCount(pieceDestinations), regularFlag));
                                 }
                             }
                             break;
@@ -3296,7 +3294,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
 
                     while(true)
                     {
-                        targetSquare = math.tzcnt(targetPiece);
+                        targetSquare = BitboardUtils.TrailingZeroCount(targetPiece);
                         targetDifference = targetSquare - kingSquare;
 
                         if ((KnightAttackTable[targetSquare] & (1UL << kingSquare)) == 0) // if king is not attacked by this knight
@@ -3321,7 +3319,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                     while(true)
                     {
                         walk = kingSquare;
-                        targetSquare = math.tzcnt(targetPiece);
+                        targetSquare = BitboardUtils.TrailingZeroCount(targetPiece);
                         targetDifference = targetSquare - kingSquare;
                         if ((targetDifference % 9) == 0) // check 9  first to avoid the 0 to 63 edge case
                         {
@@ -3369,7 +3367,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                     while(true)
                     {
                         walk = kingSquare;
-                        targetSquare = math.tzcnt(targetPiece);
+                        targetSquare = BitboardUtils.TrailingZeroCount(targetPiece);
                         targetDifference = targetSquare - kingSquare;
                         if ((targetDifference % 8) == 0) // check 9  first to avoid the 0 to 63 edge case
                         {
@@ -3415,7 +3413,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
                     while(true)
                     {
                         walk = kingSquare;
-                        targetSquare = math.tzcnt(targetPiece);
+                        targetSquare = BitboardUtils.TrailingZeroCount(targetPiece);
                         targetDifference = targetSquare - kingSquare;
                         if ((targetDifference % 9) == 0) // check 9  first to avoid the 0 to 63 edge case
                         {
@@ -3530,7 +3528,7 @@ public class Board : MonoBehaviour// All methods, struts and classes related to 
             ulong piece = bitboards[index];
             while (piece != 0UL)
             {
-                piece = piece & ~(1UL << math.tzcnt(piece));
+                piece = piece & ~(1UL << BitboardUtils.TrailingZeroCount(piece));
                 count += 1;
             }
 

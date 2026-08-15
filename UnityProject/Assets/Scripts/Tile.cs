@@ -257,7 +257,7 @@ public class Tile: MonoBehaviour
     void Start()
     {
         graphicalBoard = GameObject.Find("Graphical Board").GetComponent<GraphicalBoard>();
-        board = GameObject.Find("Board").GetComponent<Board>(); 
+        board = graphicalBoard.board;
         clock = GameObject.Find("Clock Canvas").GetComponent<Clock>();
     }
 
