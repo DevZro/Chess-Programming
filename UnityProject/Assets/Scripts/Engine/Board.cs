@@ -65,6 +65,8 @@ public class Board// All methods, struts and classes related to the Chess Operat
         // for the 50 move rule
         // records how many halfmoves since a pawn move or capture
         public int halfMoveCounter;
+        // records what move the game currently is on
+        public int moveCounter;
         public int HalfMoveShift = 30; // the number of bits to shift to get to the halfMoveCounter in the ulong stored in boardStateHistory
         public ulong HalfMoveMask = 0x7F; // half-move counter never exceeds 100 so 7 bits is enough to store it, thus the mask is 0x7F
 
@@ -221,6 +223,7 @@ public class Board// All methods, struts and classes related to the Chess Operat
             }
 
             halfMoveCounter = int.Parse(stateVariables[4]);
+            moveCounter = int.Parse(stateVariables[5]);
             UpdateOccupiedAndEmpty();
             InitializeZobrist();
 
@@ -1519,10 +1522,14 @@ public class Board// All methods, struts and classes related to the Chess Operat
             }
              
 
+            // if black just played increase moveCounter by 1
+            if (!isWhite)
+            {
+                moveCounter += 1;
+            }
             isWhite = !isWhite;
             UpdateOccupiedAndEmpty();
             UpdateZobristAfterMove(move, pieceIndex, captureIndex, oldCastlingRights, oldEnpessantSquare );
-            // UnityEngine.Debug.Log($"{halfMoveCounter} plies");
             CheckForThreefoldRepetition();
             CheckForInsufficientMaterial();
         }
@@ -1599,6 +1606,11 @@ public class Board// All methods, struts and classes related to the Chess Operat
 
             halfMoveCounter = (int) ((currrentState >> HalfMoveShift) & HalfMoveMask);
             
+            // if it was white to play afte the undo then the moveCounter reduces by 1
+            if (isWhite)
+            {
+                moveCounter += 1;
+            }
             isWhite = !isWhite;
             UpdateOccupiedAndEmpty();
             UpdateZobristAfterUndo(originalSquare, currentSquare, capturedPieceIndex, oldCastlingRights, oldEnpessantSquare);
@@ -3509,7 +3521,7 @@ public class Board// All methods, struts and classes related to the Chess Operat
         // Function for checking if game is over and who won
         // returns a GameResult enum value
         // the logic is still incomplete as it doesn't contain 50 move rule and three fold repitition
-        
+
         // first returns true if game is over and false if the game is still on
         // second returns true if the game is won and false if it is a draw
         // third returns true if white wins and false if black wins

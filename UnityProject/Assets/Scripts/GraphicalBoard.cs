@@ -132,7 +132,7 @@ public class GraphicalBoard : MonoBehaviour
         //blackPlayer = blackIsHuman ? new HumanPlayer(this, board) : new BotPlayer(board, this, new RandomBotEngine());
 
         whitePlayer = new BotPlayer(board, this, new BondFish1_4(6));
-        blackPlayer = new BotPlayer(board, this, new RandomBotEngine());
+        blackPlayer = new BotPlayer(board, this, new BondFish1_2(4));
 
         //whitePlayer = new HumanPlayer(this, board);
         //blackPlayer = new HumanPlayer(this, board);

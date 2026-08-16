@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 namespace ChessEngine
 {
     // BondFish1.4, 
+    // Addjusts Checkmate Evaluation to favour closer Mates
     // Adds a Quiescent search to better understand tactical positions
     public class BondFish1_4 : IBotEngine
     {
@@ -42,7 +43,8 @@ namespace ChessEngine
                 {
                     return 0;
                 }
-                return -100000; // if checkmate then it is good for the side that played the move
+                return -100000 + board.moveCounter; // if checkmate then it is good for the side that played the move
+                // the farther the checkmate the worse it is since a closer checkmate is best
             }
 
             white_count += board.PieceCount(0) * Pawn;
