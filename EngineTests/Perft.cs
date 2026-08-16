@@ -1,10 +1,9 @@
 using System;
 using System.Diagnostics;
-using Chess;
 
 class Program
 {
-    public static long Perft(ChessBoard chessboard, int depth)
+    public static long Perft(Board chessboard, int depth)
     {
         long total = 0;
 
@@ -27,7 +26,8 @@ class Program
     public static void Main()
     {
         
-        ChessBoard chessBoard = new ChessBoard();
+        Board chessBoard = new Board();
+        chessBoard.LoadFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
         long total;
         Stopwatch stopwatch;

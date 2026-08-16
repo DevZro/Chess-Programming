@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Net.Http.Headers;
-using UnityEngine;
 
 namespace ChessEngine
 {
@@ -213,9 +212,6 @@ namespace ChessEngine
                 }
                 
             }
-            UnityEngine.Debug.Log("1.3");
-            UnityEngine.Debug.Log(Positions);
-            //UnityEngine.Debug.Log(best_move.data);
             
             return best_move;
         }

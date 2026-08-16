@@ -144,7 +144,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   graphicalBoard: {fileID: 0}
-  board: {fileID: 0}
   clock: {fileID: 0}
   highlightColor: {r: 0, g: 1, b: 0.5, a: 0.6}
   captureHighlightColor: {r: 1, g: 0.2, b: 0.2, a: 0.7}

@@ -455,7 +455,6 @@ public class Board// All methods, struts and classes related to the Chess Operat
             if ((blackOccupied == bitboards[11]) && (whiteOccupied == bitboards[5])) // K v K
             {
                 claimInsufficientMaterial = true;
-                UnityEngine.Debug.Log(111111);
             } 
 
             else if (((whiteOccupied & ~bitboards[5]) == bitboards[1]) && (blackOccupied == bitboards[11])) // K + nN v K
@@ -463,7 +462,6 @@ public class Board// All methods, struts and classes related to the Chess Operat
                 if (BitboardUtils.IsSingleBit(bitboards[1])) // n = 1
                 {
                     claimInsufficientMaterial = true;
-                    UnityEngine.Debug.Log(222222);
                 }
             }
 
@@ -472,7 +470,6 @@ public class Board// All methods, struts and classes related to the Chess Operat
                 if (BitboardUtils.IsSingleBit(bitboards[7])) // n = 1
                 {
                     claimInsufficientMaterial = true;
-                    UnityEngine.Debug.Log(333333);
                 }
             }
 
@@ -481,7 +478,6 @@ public class Board// All methods, struts and classes related to the Chess Operat
                 if (BitboardUtils.IsSingleBit(bitboards[2]))  // n = 1
                 {
                     claimInsufficientMaterial = true;
-                    UnityEngine.Debug.Log(444444);
                 }
             }
 
@@ -490,7 +486,6 @@ public class Board// All methods, struts and classes related to the Chess Operat
                 if (BitboardUtils.IsSingleBit(bitboards[8])) // n = 1
                 {
                     claimInsufficientMaterial = true;
-                    UnityEngine.Debug.Log(555555);
                 }
             }
             else // ability to change the position back to normal incase such a position was seen during search.

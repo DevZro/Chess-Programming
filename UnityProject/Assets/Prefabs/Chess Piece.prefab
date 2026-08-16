@@ -59,7 +59,6 @@ MonoBehaviour:
   white_knight: {fileID: 21300000, guid: d2052c10d68ee144889e62006eca5d5f, type: 3}
   white_pawn: {fileID: 21300000, guid: 537b76eb9533fb64388fa0989336a8fe, type: 3}
   graphicalBoard: {fileID: 0}
-  board: {fileID: 0}
   clock: {fileID: 0}
 --- !u!212 &6770543352429964127
 SpriteRenderer:

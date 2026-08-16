@@ -1,14 +1,13 @@
 using System;
 using System.Diagnostics;
-using UnityEngine;
-
 namespace ChessEngine
 {
-    // BondFish1.2, 
-    // implements alpha-beta pruning to improve search
-    public class BondFish1_2 : IBotEngine
+    // BondFish1.1, 
+    // adds proper minimax search with depth
+    // adds a check for terminal positions
+    public class BondFish1_1 : IBotEngine
     {
-        public string GetName() => "BondFish1.2";
+        public string GetName() => "BondFish1.1";
         int Pawn = 100;
         int Knight = 300;
         int Bishop = 300;
@@ -18,7 +17,7 @@ namespace ChessEngine
         int Depth;
         int Positions = 0;
 
-        public BondFish1_2(int depth)
+        public BondFish1_1(int depth)
         {
             Depth = depth;
         }
@@ -60,9 +59,7 @@ namespace ChessEngine
             }
         }
 
-
-
-        public int Search(int alpha, int beta, int depth, Board board)
+        public int Search(int depth, Board board)
         {
             Positions += 1;
             if ((depth == 0) || board.GameOver()[0])
@@ -70,51 +67,43 @@ namespace ChessEngine
                 return Evaluate(board);
             }
             var moves = board.GenerateMoves();
-
+            
+            int best_score = -1000000;
             foreach (Move move in moves)
             {
                 board.MakeMove(move);
-                int score = -Search(-beta, -alpha, depth - 1, board);
+                int score = -Search(depth - 1, board);
+
+                if (score > best_score)
+                {
+                    best_score = score;
+                }
                 board.UndoMove();
-              
-                if (score >= beta)
-                {
-                    return beta;
-                }   
-                if (score > alpha)
-                {
-                    alpha = score;
-                } 
             }
-            return alpha;
+            return best_score;
         }
 
         public Move GetBestMove(Board board)
         {
             Positions = 0;
             Move best_move = new Move(0, 0, 0);
-            
-            int alpha = -1000000;
-            int beta = 1000000;
+            int best_score = -1000000;
 
             var moves = board.GenerateMoves();
 
             foreach (Move move in moves)
             {
                 board.MakeMove(move);
-                int score = -Search(-beta, -alpha, Depth - 1, board);
+                int score = -Search(Depth - 1, board);
                 board.UndoMove();
 
-                if (score > alpha)
+                if (score > best_score)
                 {
-                    alpha = score;
                     best_move = move;
+                    best_score = score;
                 }
                 
             }
-            UnityEngine.Debug.Log("1.2");
-            UnityEngine.Debug.Log(Positions);
-
             return best_move;
         }
 
