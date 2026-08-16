@@ -82,32 +82,30 @@ public class GraphicalBoard : MonoBehaviour
         */
 
     }
+
     public void OnMoveCompleted()
-    {
-        clock.SwitchTurn(board.isWhite);
+    {               
+        GameResult result = board.GameOver();
+        isGameOn = result == GameResult.Ongoing;
 
-        isGameOn = !board.GameOver()[0];           
-        if (!isGameOn)
+        switch (result)
         {
-            clock.StopClocks();
-            if (!board.GameOver()[1])
-            {
+            case GameResult.WhiteWins:
+                controller.ShowGameResult("White Wins!"); 
+                clock.StopClocks();
+                break;
+            case GameResult.BlackWins:
+                controller.ShowGameResult("Black Wins!");
+                clock.StopClocks();
+                break;
+            case GameResult.Draw:
+                clock.StopClocks();
                 controller.ShowGameResult("Draw!");
-
-            }
-            else
-            {
-                if (board.GameOver()[2])
-                {
-                    controller.ShowGameResult("White Wins!");   
-                }
-
-                else
-                {
-                    controller.ShowGameResult("Black Wins!");
-                }
-            }                
-        } 
+                break;
+            case GameResult.Ongoing:
+                clock.SwitchTurn(board.isWhite);
+                break; // nothing to do
+        }
         currentPlayer = (currentPlayer == whitePlayer) ? blackPlayer : whitePlayer;
         currentPlayer.OnTurnStarted();
     }
@@ -134,7 +132,7 @@ public class GraphicalBoard : MonoBehaviour
         //blackPlayer = blackIsHuman ? new HumanPlayer(this, board) : new BotPlayer(board, this, new RandomBotEngine());
 
         whitePlayer = new BotPlayer(board, this, new BondFish1_4(6));
-        blackPlayer = new BotPlayer(board, this, new BondFish1_1(3));
+        blackPlayer = new BotPlayer(board, this, new RandomBotEngine());
 
         //whitePlayer = new HumanPlayer(this, board);
         //blackPlayer = new HumanPlayer(this, board);

@@ -27,9 +27,9 @@ namespace ChessEngine
             int white_count = 0;
             int black_count = 0;
 
-            if (board.GameOver()[0])
+            if (board.GameOver() != GameResult.Ongoing)
             {
-                if (!board.GameOver()[1])
+                if (board.GameOver() == GameResult.Draw)
                 {
                     return 0;
                 }
@@ -64,7 +64,7 @@ namespace ChessEngine
         public int Search(int alpha, int beta, int depth, Board board)
         {
             Positions += 1;
-            if ((depth == 0) || board.GameOver()[0])
+            if ((depth == 0) || board.GameOver() != GameResult.Ongoing)
             {
                 return Evaluate(board);
             }

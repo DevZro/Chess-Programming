@@ -3507,26 +3507,27 @@ public class Board// All methods, struts and classes related to the Chess Operat
 
 
         // Function for checking if game is over and who won
-        // returns 3 bools
+        // returns a GameResult enum value
+        // the logic is still incomplete as it doesn't contain 50 move rule and three fold repitition
+        
         // first returns true if game is over and false if the game is still on
         // second returns true if the game is won and false if it is a draw
         // third returns true if white wins and false if black wins
-        // the logic is still incomplete as it doesn't contain 50 move rule and three fold repitition
-        public bool[] GameOver()
+        
+        public GameResult GameOver()
         {
-            bool[] results = new bool[3];
-            if ((GenerateMoves().Count == 0) || claimInsufficientMaterial)
+            int moveCount = GenerateMoves().Count;
+            int numChecks = NumChecks(isWhite)[0];
+            if ((moveCount != 0) && !claimInsufficientMaterial)
             {
-                results[0] = true;
-
-                // the player that is to play is the only one that can be in check
-                if ((NumChecks(isWhite)[0] != 0) && ! claimInsufficientMaterial)
-                {
-                    results[1] = true;
-                    results[2] = !isWhite;
-                } 
+                return GameResult.Ongoing;
             }
-            return results;
+            // the player that is to play is the only one that can be in check
+            if ((moveCount == 0) && (numChecks != 0))
+            {
+                return isWhite ? GameResult.BlackWins : GameResult.WhiteWins;
+            } 
+            return GameResult.Draw;
         }
 
         public int PieceCount(int index)

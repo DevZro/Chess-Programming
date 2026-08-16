@@ -11,3 +11,6 @@ public struct Move
         data = (ushort) ((startSquare) | (stopSquare << 6) | (moveFlag  << 12));
     }
 }
+
+public enum GameResult { Ongoing, WhiteWins, BlackWins, Draw }
+
